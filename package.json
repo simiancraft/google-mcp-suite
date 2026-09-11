@@ -80,11 +80,11 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "@googleapis/calendar": "^15.0.0",
-    "@googleapis/docs": "^9.3.0",
-    "@googleapis/drive": "^20.2.0",
-    "@googleapis/gmail": "^17.0.0",
-    "@googleapis/sheets": "^13.0.2",
+    "@googleapis/calendar": "^16.0.0",
+    "@googleapis/docs": "^10.0.0",
+    "@googleapis/drive": "^21.0.0",
+    "@googleapis/gmail": "^18.0.0",
+    "@googleapis/sheets": "^14.0.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "addressparser": "^1.0.1",
     "google-auth-library": "10.5.0",

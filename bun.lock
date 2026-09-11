@@ -5,11 +5,11 @@
     "": {
       "name": "google-mcp",
       "dependencies": {
-        "@googleapis/calendar": "^15.0.0",
-        "@googleapis/docs": "^9.3.0",
-        "@googleapis/drive": "^20.2.0",
-        "@googleapis/gmail": "^17.0.0",
-        "@googleapis/sheets": "^13.0.2",
+        "@googleapis/calendar": "^16.0.0",
+        "@googleapis/docs": "^10.0.0",
+        "@googleapis/drive": "^21.0.0",
+        "@googleapis/gmail": "^18.0.0",
+        "@googleapis/sheets": "^14.0.0",
         "@modelcontextprotocol/sdk": "^1.29.0",
         "addressparser": "^1.0.1",
         "google-auth-library": "10.5.0",
@@ -71,15 +71,15 @@
 
     "@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.2", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA=="],
 
-    "@googleapis/calendar": ["@googleapis/calendar@15.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-K5FVIhFOgAaNsfshvOEmGkT7kkowM69MzMYATGDA6Ol3ZwqIK0nZJnS9/keFVYkId6MT2elAy+omcAMUdadHww=="],
+    "@googleapis/calendar": ["@googleapis/calendar@16.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-Z/8Jdf4hMvmMlBMhP0whZNPSixEpYv4mC5RJfrlvrnqpf/rV68MJ+8M9MmyqUt7/SQp2zRfVmEqkk+csB2Cgmg=="],
 
-    "@googleapis/docs": ["@googleapis/docs@9.3.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-ga0ZlsrYxZGUfWbio7paMEs/0f6UtwUSJZcayFZ3DpJFSAnh9KhsPGj0bynrojensab18eO0ffVllUGKYCvOqA=="],
+    "@googleapis/docs": ["@googleapis/docs@10.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-5ioOb5THY9McFIYBPUNG3T/jVsx+1XIdmox5D+2irPRU7nphzfzU/DUfMWDeVcXRP2eNBCq7tRj8Yk5hSVOP4g=="],
 
-    "@googleapis/drive": ["@googleapis/drive@20.2.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-6xPjqqLl34jBXWYMO34ywLVQsT8FgH948x8YI9o6Tdqs7+n4QRyvkC+BcvVQaAPNc+pyqsvZAXcbdMEcGgDUGw=="],
+    "@googleapis/drive": ["@googleapis/drive@21.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-vebQpAqn+FZcmDWh1TEQTcYdkKftcSaHc7kO2ZxrINBb+ZMcFu1UybD3+maeqdLs60HrRDYwyzJ6TgZ7/Vn2Rg=="],
 
-    "@googleapis/gmail": ["@googleapis/gmail@17.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-pV0E+has0ZCqIJoaTmQkOyuRXDtcC8bvH+hmoqGH+J2qxEzhsLT3VX69v6Ef7bifhwokYH82rgQlMRHpFDLrmw=="],
+    "@googleapis/gmail": ["@googleapis/gmail@18.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-qC8CaF3mgi8ZMm7IYK1Pk6AF3z2v1IE++8rtn+Mmpx+zIhbS9MMazY7+WicwgLKKskn5zQLXCoNv0Jn7OdFfPg=="],
 
-    "@googleapis/sheets": ["@googleapis/sheets@13.0.2", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-b1tBlMcfvNEziM4DZCikLOc9iqSlgCK1e5bMKtNQIADRXr1CQmbkHV3ZBVvTsFsjLErgihqO58Itn/kzCnSZ0A=="],
+    "@googleapis/sheets": ["@googleapis/sheets@14.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-fANEl4RQohsPYUWhcLSYyUyE8A8bRfvw/bp8h0t8VDQqTgdQ3itZBkty4nddtdqCAvNDpA+KM66OejVKDd6aFg=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.14", "", { "peerDependencies": { "hono": "^4" } }, "sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw=="],
 
