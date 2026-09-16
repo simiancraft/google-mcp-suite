@@ -1,5 +1,6 @@
 /**
- * Account roster the doctor drives the OAuth flow across.
+ * Account roster: the doctor drives the OAuth flow across it, and the shared
+ * HTTP host (src/host) serves every account on it.
  *
  * The roster lives outside the repo at `<GOOGLE_MCP_DIR>/accounts.json`, so real
  * email addresses never land in version control. Shape:

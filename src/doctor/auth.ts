@@ -5,8 +5,9 @@
  *   google-mcp-doctor auth --all             # every account in the roster
  *   google-mcp-doctor auth                   # re-auth only what is expired/due
  */
+
+import { type Account, loadAccounts, toAccount } from '../auth/accounts.js';
 import { runAuthFlow } from '../auth/oauth.js';
-import { type Account, loadAccounts, toAccount } from './accounts.js';
 import { openInBrowser } from './browser.js';
 import { statusFor } from './status.js';
 

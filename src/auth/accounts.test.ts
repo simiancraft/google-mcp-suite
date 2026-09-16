@@ -15,7 +15,7 @@ let dir: string;
 
 beforeEach(() => {
   for (const k of ENV) saved[k] = process.env[k];
-  dir = mkdtempSync(path.join(os.tmpdir(), 'doctor-accounts-'));
+  dir = mkdtempSync(path.join(os.tmpdir(), 'auth-accounts-'));
   for (const k of ENV) delete process.env[k];
   process.env['GOOGLE_MCP_DIR'] = dir;
 });
