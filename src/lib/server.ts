@@ -12,7 +12,13 @@ import { type AnyOperation, SOURCE_META_KEY } from './operation.js';
 import { errorMessage } from './utils/error.js';
 import { ownLookup } from './utils/lookup.js';
 
-export type ServerOptions<Client> = {
+/**
+ * Everything that makes a service a service, independent of how it is started:
+ * its identity, its operations, and how to build an authenticated client for an
+ * account. The stdio bin (`server()`) and the shared HTTP host (`src/host`) both
+ * consume this shape, so one definition serves both transports.
+ */
+export type ServiceDefinition<Client> = {
   /** MCP server name (the service, e.g. 'gmail'). */
   name: string;
   /** Server version; defaults to the package version. */
@@ -51,6 +57,9 @@ export type ServerOptions<Client> = {
    * supplies the predicate, this generic layer never inspects error shapes.
    */
   staleCredentials?: (error: unknown) => boolean;
+};
+
+export type ServerOptions<Client> = ServiceDefinition<Client> & {
   /** Transport to connect; defaults to stdio. Injectable for tests. */
   transport?: Transport;
 };
@@ -83,7 +92,7 @@ export function toolDefinitions<Client>(operations: Record<string, AnyOperation<
  * rendering (for clients that do not yet read `structuredContent`). All failure
  * paths return an `isError` result rather than throwing, with one exception:
  * a handler error that `rethrows` certifies escapes untouched, so the
- * credential-healing layer in `server()` can see it typed rather than
+ * credential-healing layer in `createServer()` can see it typed rather than
  * flattened into envelope text. Exported for tests.
  */
 export async function callOperation<Client>(
@@ -136,25 +145,21 @@ export async function callOperation<Client>(
 }
 
 /**
- * Turn a service's operations into a running stdio MCP server. Identical for every
- * service; only the bound `Client` type and the operations differ. Owns the
- * cross-cutting concerns: the `auth` subcommand, account binding, the `tools/list`
- * payload, dispatch, validation, error wrapping, and stale-credential healing.
+ * Wire a service definition into an MCP `Server` bound to one account: the
+ * `tools/list` payload, dispatch, validation, error wrapping, and
+ * stale-credential healing. Transport-agnostic and not yet connected: the
+ * stdio runner (`server()`) connects it to stdio, and the shared HTTP host
+ * builds one per client session. The client is built up front, so a missing
+ * or unreadable token surfaces here, before anything is served.
  */
-export async function server<Client>(options: ServerOptions<Client>): Promise<void> {
-  const { name, version = pkg.version, operations, client, runAuth, staleCredentials } = options;
-  const { title, description, websiteUrl = pkg.homepage, instructions } = options;
+export async function createServer<Client>(
+  definition: ServiceDefinition<Client>,
+  account: string | undefined,
+): Promise<Server> {
+  const { name, version = pkg.version, operations, client, staleCredentials } = definition;
+  const { title, description, websiteUrl = pkg.homepage, instructions } = definition;
 
-  if (process.argv[2] === 'auth') {
-    if (!runAuth) {
-      console.error(`${name}: no auth flow configured.`);
-      process.exit(1);
-    }
-    await runAuth(process.argv[3] ?? process.env['GOOGLE_MCP_ACCOUNT']);
-    process.exit(0);
-  }
-
-  let authed = await client(process.env['GOOGLE_MCP_ACCOUNT']);
+  let authed = await client(account);
   const mcp = new Server(
     {
       name,
@@ -184,7 +189,7 @@ export async function server<Client>(options: ServerOptions<Client>): Promise<vo
       // operation's own annotations: read-only or idempotent retries here;
       // anything else hands the retry decision back to the agent.
       try {
-        authed = await client(process.env['GOOGLE_MCP_ACCOUNT']);
+        authed = await client(account);
       } catch (rebuildError) {
         return errorResult(errorMessage(rebuildError));
       }
@@ -198,5 +203,28 @@ export async function server<Client>(options: ServerOptions<Client>): Promise<vo
     }
   });
 
+  return mcp;
+}
+
+/**
+ * Turn a service definition into a running stdio MCP server bound to the
+ * `GOOGLE_MCP_ACCOUNT` account. Identical for every service; only the bound
+ * `Client` type and the operations differ. Owns the process-level concerns
+ * (the `auth` subcommand and the account env var); `createServer()` owns the
+ * protocol wiring.
+ */
+export async function server<Client>(options: ServerOptions<Client>): Promise<void> {
+  const { name, runAuth } = options;
+
+  if (process.argv[2] === 'auth') {
+    if (!runAuth) {
+      console.error(`${name}: no auth flow configured.`);
+      process.exit(1);
+    }
+    await runAuth(process.argv[3] ?? process.env['GOOGLE_MCP_ACCOUNT']);
+    process.exit(0);
+  }
+
+  const mcp = await createServer(options, process.env['GOOGLE_MCP_ACCOUNT']);
   await mcp.connect(options.transport ?? new StdioServerTransport());
 }
