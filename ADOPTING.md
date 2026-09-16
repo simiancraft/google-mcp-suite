@@ -57,7 +57,8 @@ Adoption changes an enumerable set of things. Decommissioning removes that set.
    [Removing credentials](#removing-credentials-optional-destructive)).
 3. **MCP server entries**, named `<service>-<account>` (`gmail-personal`,
    `calendar-work`), one per service per account, registered at the client's
-   user/global scope.
+   user/global scope; either a stdio command per entry, or (with the shared
+   host) a `url` per entry pointing at `http://127.0.0.1:8765/<account>/<service>`.
 4. **Client-specific supersession settings** that stop the client preferring
    its own first-party Google surface (Claude Code: three `permissions.deny`
    strings; Codex CLI: `enabled = false` lines for any installed
@@ -216,6 +217,35 @@ requirement is satisfied by default; there is no scope flag to hunt for.
 
 **Gemini CLI**: the `mcpServers` JSON shape above, inside
 `~/.gemini/settings.json` (`gemini mcp add` also works).
+
+**Shared host (optional; one process for everything):** every stdio entry
+above is a process per client session, so a machine running several agents
+at once, or a client that spawns MCP servers per thread and never closes them,
+accumulates idle Node processes. Instead, run `google-mcp-host` once (under a
+supervisor: a systemd user unit, launchd, or a terminal you keep open) and
+register the same `<service>-<account>` names by URL. The host serves every
+roster account at `http://127.0.0.1:8765/<account>/<service>`:
+
+```sh
+# Claude Code
+claude mcp add --scope user --transport http gmail-personal http://127.0.0.1:8765/personal/gmail
+```
+
+```toml
+# Codex CLI, ~/.codex/config.toml
+[mcp_servers.gmail-personal]
+url = "http://127.0.0.1:8765/personal/gmail"
+```
+
+```json
+{ "mcpServers": { "gmail-personal": { "url": "http://127.0.0.1:8765/personal/gmail" } } }
+```
+
+Identity is unchanged (one account per session, chosen by the path), the
+operations and instructions are the stdio bins', and step 7 verifies it the
+same way. On a shared machine set `--token` (or `GOOGLE_MCP_HOST_TOKEN`) and
+pass it as an `Authorization: Bearer` header from each client; see
+[src/host/README.md](./src/host/README.md).
 
 **Cloud-sandboxed agents (Google Jules and similar):** out of scope. Jules
 connects only to an allowlist of hosted MCP servers, with no way to run an
@@ -377,7 +407,8 @@ only what adoption added.
    ```
 
    Other clients: delete the corresponding `mcpServers` / `[mcp_servers.*]`
-   entries.
+   entries. If adoption ran the shared host, stop its process (and remove the
+   supervisor unit that started it) once the `url` entries are gone.
 4. **Uninstall the package** (optional):
 
    ```sh

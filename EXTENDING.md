@@ -342,5 +342,12 @@ GOOGLE_MCP_ACCOUNT=<account> google-mcp-<svc>        # serve
 GOOGLE_MCP_ACCOUNT=<account> google-mcp-<svc> auth   # authorize the account
 ```
 
+Or every service for every roster account from one process, over Streamable
+HTTP, one session per client (`src/host/README.md`):
+
+```sh
+google-mcp-host        # http://127.0.0.1:8765/<account>/<svc>
+```
+
 Credentials live outside the repo: `~/.google-mcp/client_secret.json` (shared
 OAuth app) and `~/.google-mcp/tokens/<account>.json` (per account, 0600).

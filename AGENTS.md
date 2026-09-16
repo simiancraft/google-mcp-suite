@@ -12,7 +12,8 @@ google-mcp-suite/
     ├── auth/        # shared OAuth: authorizedClient(account), runAuthFlow(account), SCOPES
     ├── lib/         # the protocol surface: root files are the named domain ideas (operation, server, capabilities, instructions, optionality, limits); utils/ holds mechanisms; testing/ is build-excluded scaffolding
     ├── gmail/       # the canary server; new services mirror it as src/<service>/
-    │   ├── index.ts          # server({ name, title, description, instructions, operations, client }); the bin entry
+    │   ├── service.ts        # the ServiceDefinition: { name, title, description, instructions, operations, client }
+    │   ├── index.ts          # server(service): the stdio bin entry; the host serves the same definition over HTTP
     │   ├── operation.ts       # gmailOperation: operation() bound to the client type
     │   ├── instructions.ts    # served usage paragraph (MCP initialize result)
     │   ├── entities/          # PascalCase zod nouns (Label, Thread, Draft, ...)
@@ -25,7 +26,8 @@ google-mcp-suite/
     ├── sheets/      # the Sheets server; methods-only (Google publishes no Sheets MCP toolset, so no tools/)
     ├── docs/        # the Docs server; methods-only (curated batchUpdate subset is the editing surface)
     ├── drive/       # the Drive server; MCP toolset (8 tools) + REST methods
-    ├── suite/       # the front-door bin (google-mcp-suite <service>); dispatches to a service or doctor, imports none of their internals
+    ├── suite/       # the front-door bin (google-mcp-suite <service>); dispatches to a service, doctor, or host, imports none of their internals
+    ├── host/        # google-mcp-host: every service, every account, one Streamable HTTP process; knows the services, no service imports it; see src/host/README.md
     └── doctor/      # provisioning + auth-health CLI (bin: google-mcp-doctor); see src/doctor/README.md
 ```
 
@@ -36,7 +38,7 @@ emits a self-contained package.
 ## Conventions (follow these)
 
 - **Auth lives once.** A service never implements OAuth. It imports from `src/auth` and calls `authorizedClient(account)` to get an authenticated client. If you find auth code in a service folder, it is a bug; lift it to `src/auth`.
-- **Identity by instance, not by argument.** A running server is bound to one account via the `GOOGLE_MCP_ACCOUNT` env var. Operations do not take an account parameter; multi-account is achieved by running one instance per account.
+- **Identity by instance, not by argument.** A running server is bound to one account via the `GOOGLE_MCP_ACCOUNT` env var. Operations do not take an account parameter; multi-account is achieved by running one instance per account. The shared HTTP host keeps the rule with sessions instead of processes: each session is bound to the account in its URL path (`/<account>/<service>`), built from the same `ServiceDefinition` the stdio bin runs.
 - **B1 token model.** One shared OAuth client (`client_secret`). One token per account, granted the front-loaded scope union, authorized once. A service reads only the token for its configured account.
 - **Thin servers, folder-per-operation.** Each operation is a folder with three files: `schema.ts` (a single `schema: { input, output }` zod object, composing `entities/`), `handler.ts` (the work; a standalone `handler(client, args)` function), and `index.ts` (the definition: `export const <name> = operation({ description, annotations, source, schema, handler })`; `annotations` is the four-hint quad, `source` the transcribed reference page, emitted on the wire under `_meta['com.simiancraft.google-mcp/source']`), plus a colocated `handler.test.ts`. Every operation has the same `Operation` shape. The `lib` folder (`src/lib`) provides the two primitives, `operation()` and `server()`; never reimplement the protocol. `src/gmail` is the shape to copy.
 - **Tools vs methods, both operations.** `tools/` mirrors Google's MCP toolset reference; `methods/` covers the broader REST reference (operations the toolset omits). Identical construction; both use `operation()`. The server merges them with `mergeOperations(tools, methods)`, which throws on a duplicate wire name. On the MCP wire there is only "tools". Where Google publishes no MCP toolset at all (Sheets and Docs), the service is **methods-only**: no `tools/` folder, and `methods/` is the whole wire surface. The split is intentional, not incidental: MCP's toolset alone cannot fully drive a service, so `methods/` is how the suite goes past MCP to fully instrument an account, and the two folders mirror Google's own two reference trees (MCP vs REST) to keep provenance obvious and enable documentation-driven updates (a reference page maps onto one `schema`/`handler`/`index` triple). Every operation declares all four MCP `ToolAnnotations` hints explicitly (read-only, destructive, idempotent, open-world), emitted verbatim in `tools/list`: tools transcribe their Google MCP page's Tool Annotations section; methods follow the same rubric (reads read-only, creates additive, updates non-destructive, removals destructive, sends destructive + open-world); see EXTENDING.md. All vocabulary is sourced from the docs; entity TSDoc from the guides Concepts page, field docs in `.describe()` so they reach the wire schema. See `EXTENDING.md`.
@@ -77,11 +79,12 @@ its Google reference page, make a `tools/<name>/` or `methods/<name>/` folder
 register it in that folder's `registry.ts`, and add any new `entities/`. A new
 **service** is a new folder `src/<service>/`: add its scopes to the shared
 `SCOPES` union in `src/auth/config.ts` (services do not declare scopes locally),
-call `server({ name, title, description, instructions, operations, client })`
-in its `index.ts` (instructions are served in the MCP initialize result), add
-a `bin` entry in `package.json`, and register the service in
-`src/suite/dispatch.ts` so the front-door bin can start it (a drift test ties
-the dispatch list to the published bins).
+export its `ServiceDefinition` from `service.ts` and call `server(service)` in
+its `index.ts` (instructions are served in the MCP initialize result), add a
+`bin` entry in `package.json`, and register the service in both
+`src/suite/dispatch.ts` (so the front-door bin can start it) and
+`src/host/services.ts` (so the shared host serves it); drift tests tie both
+lists to the published bins.
 
 ## Things that will trip you up
 

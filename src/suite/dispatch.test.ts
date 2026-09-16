@@ -1,19 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import pkg from '../../package.json' with { type: 'json' };
-import { resolve, services, usage } from './dispatch.js';
+import { peers, resolve, services, usage } from './dispatch.js';
 
 describe('published bins', () => {
   test('the dispatchable names mirror the published bins', () => {
     // pkg.name, not a literal: npx can only run a bin named after the package.
-    const expected = [pkg.name, 'google-mcp-doctor', ...services.map((s) => `google-mcp-${s}`)];
+    const expected = [pkg.name, ...[...services, ...peers].map((name) => `google-mcp-${name}`)];
     expect(Object.keys(pkg.bin).sort()).toEqual(expected.sort());
   });
 
   test('each dispatch target is that bin entry point, relative to dist/suite/', () => {
     const bins: Record<string, string> = pkg.bin;
-    for (const name of [...services, 'doctor'] as const) {
-      const bin = name === 'doctor' ? 'google-mcp-doctor' : `google-mcp-${name}`;
-      expect(bins[bin]).toBe(`./dist/${name}/index.js`);
+    for (const name of [...services, ...peers]) {
+      expect(bins[`google-mcp-${name}`]).toBe(`./dist/${name}/index.js`);
       expect(resolve(name)).toBe(`../${name}/index.js`);
     }
   });
@@ -26,8 +25,9 @@ describe('resolve', () => {
     }
   });
 
-  test('maps doctor to the doctor CLI', () => {
+  test('maps the peer CLIs to their entry modules', () => {
     expect(resolve('doctor')).toBe('../doctor/index.js');
+    expect(resolve('host')).toBe('../host/index.js');
   });
 
   test('misses on unknown names', () => {
@@ -49,6 +49,7 @@ describe('usage', () => {
       expect(usage).toContain(`google-mcp-${service}`);
     }
     expect(usage).toContain('doctor');
+    expect(usage).toContain('host');
     expect(usage).toContain('GOOGLE_MCP_ACCOUNT');
   });
 });

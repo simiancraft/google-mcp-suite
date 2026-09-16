@@ -56,7 +56,13 @@ One instance per service per account, named `<service>-<account>`:
 
 For Claude Code, register with `claude mcp add --scope user <name> --env
 GOOGLE_MCP_ACCOUNT=<account> -- <bin>`; for OpenAI Codex CLI, `codex mcp add
-<name> --env GOOGLE_MCP_ACCOUNT=<account> -- <bin>`. See
+<name> --env GOOGLE_MCP_ACCOUNT=<account> -- <bin>`.
+
+If several agents or sessions share the machine, run `google-mcp-host` once
+instead (one process, every service, every account) and register each
+`<service>-<account>` name by URL: `http://127.0.0.1:8765/<account>/<service>`
+(`claude mcp add --scope user --transport http <name> <url>`; Codex
+`url = "<url>"`). See
 [ADOPTING.md](https://github.com/simiancraft/google-mcp-suite/blob/main/ADOPTING.md)
 for every client's path and for superseding a client's first-party Google
 surface (claude.ai connectors, OpenAI-curated plugins, Gemini's Workspace

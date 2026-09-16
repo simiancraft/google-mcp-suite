@@ -58,7 +58,7 @@ That is the whole surface. Read one operation folder and you understand all of t
 - **Siloed by design.** Each service runs as its own independent server in its own lane; the orchestrating agent is the single thing that coordinates them.
 - **Strict by construction.** Input and output schemas are validated on every call, vocabulary is sourced from Google's own docs, types are strict (NodeNext ESM, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`), and coverage is pinned at 100% in `bunfig.toml`.
 
-One package, one version: everything compiles into `google-mcp-suite`, which ships a bin per service (`google-mcp-gmail`, `google-mcp-calendar`, `google-mcp-sheets`, `google-mcp-docs`, and `google-mcp-drive` today) plus the `google-mcp-doctor` setup CLI. A `google-mcp-suite` front-door bin dispatches to any of them (`npx google-mcp-suite gmail`), which is also what lets MCP registries launch the suite from its package name alone.
+One package, one version: everything compiles into `google-mcp-suite`, which ships a bin per service (`google-mcp-gmail`, `google-mcp-calendar`, `google-mcp-sheets`, `google-mcp-docs`, and `google-mcp-drive` today) plus the `google-mcp-doctor` setup CLI and `google-mcp-host`, which serves every service for every account from one Streamable HTTP process. A `google-mcp-suite` front-door bin dispatches to any of them (`npx google-mcp-suite gmail`, `npx google-mcp-suite host`), which is also what lets MCP registries launch the suite from its package name alone.
 
 ## MCP, and then some
 
@@ -125,6 +125,32 @@ The `GOOGLE_MCP_ACCOUNT` value must be the same string `doctor auth` was given;
 a bare email is its own account label. For short aliases (`personal`, `work`)
 write the optional roster first, as [ADOPTING.md](./ADOPTING.md) step 3 does.
 
+### Or one shared host
+
+Each stdio entry above is a process per client session. On a machine running
+several agents at once (or a client that spawns MCP servers per thread and
+never closes them), that multiplies into hundreds of idle Node processes.
+`google-mcp-host` serves every service for every roster account from one
+process over MCP's Streamable HTTP transport; each client connection is its
+own session, bound to the account in the path:
+
+```sh
+google-mcp-host                     # http://127.0.0.1:8765/<account>/<service>
+```
+
+```json
+{
+  "mcpServers": {
+    "gmail-personal": { "url": "http://127.0.0.1:8765/personal/gmail" },
+    "calendar-work": { "url": "http://127.0.0.1:8765/work/calendar" }
+  }
+}
+```
+
+Same operations, same instructions, same instance names; only the process
+count changes. Loopback-only by default, with an optional bearer token and idle
+session reaping: see [src/host/README.md](./src/host/README.md).
+
 Then ask your agent for something no single-account tool can do:
 
 > Find a free 30-minute window next week that works across my work and personal calendars, book it on the work calendar with a Meet link, email the invite summary to my personal address, and log the booking in my scheduling spreadsheet.
@@ -135,7 +161,8 @@ Then ask your agent for something no single-account tool can do:
 src/
   auth/      # shared OAuth: one client secret, per-account tokens
   lib/       # the two MCP primitives: operation() + server()
-  suite/     # google-mcp-suite: the front-door bin; dispatches to a service or doctor
+  suite/     # google-mcp-suite: the front-door bin; dispatches to a service, doctor, or host
+  host/      # google-mcp-host: every service, every account, one Streamable HTTP process
   doctor/    # google-mcp-doctor: provisioning + auth-health CLI
   gmail/     # the Gmail server (reference/canary); new services mirror its shape
   calendar/  # the Calendar server; same shape
@@ -147,15 +174,16 @@ src/
 One package, one version. `auth`, `lib`, `doctor`, and each service are folders in one `src/` and compile to a single published package.
 
 - **`src/auth`** owns authentication. A service imports it and calls `authorizedClient(account)` to get an authenticated Google client.
-- **`src/lib`** owns the protocol with two primitives: `operation()` (a typed definition every operation conforms to) and `server()` (turns a service's operations into a running stdio MCP server). A service never reimplements the MCP server.
+- **`src/lib`** owns the protocol with two primitives: `operation()` (a typed definition every operation conforms to) and `server()` (turns a service's definition into a running stdio MCP server; `createServer()` underneath it is what the host builds per session). A service never reimplements the MCP server.
 - **`src/doctor`** is the setup and health CLI; it knows the services, never the other way around. See [its README](./src/doctor/README.md).
-- **`src/<service>`** is a server: `index.ts` (bootstrap) plus a folder per operation under `tools/` (MCP-sourced verbs) and `methods/` (REST-sourced verbs), each holding `schema.ts` + `handler.ts` + `index.ts` + `handler.test.ts`; shared zod nouns live in `entities/` and projections in `lib/`.
+- **`src/host`** is the shared Streamable HTTP host: one process, every service, every account, one session per client. It knows the services the same way doctor does. See [its README](./src/host/README.md).
+- **`src/<service>`** is a server: `service.ts` (the definition) and `index.ts` (the stdio bootstrap) plus a folder per operation under `tools/` (MCP-sourced verbs) and `methods/` (REST-sourced verbs), each holding `schema.ts` + `handler.ts` + `index.ts` + `handler.test.ts`; shared zod nouns live in `entities/` and projections in `lib/`.
 
 ## The multi-account model
 
 - **One OAuth app.** A single Google Cloud OAuth client (`client_secret`) is shared across every service.
 - **One token per account.** Each account is authorized once, granted the full scope union for all services. Tokens are stored per account, outside the repo. The account name is a label you choose at `doctor auth` time; an email address or a short alias (`work`, `personal`) both work, and the alias form keeps your MCP config readable.
-- **Identity by instance.** A running server is bound to one account via the `GOOGLE_MCP_ACCOUNT` environment variable. To command three accounts, you run three instances of a service, each with a different `GOOGLE_MCP_ACCOUNT`. There is no per-call account argument, so a server cannot act on the wrong account.
+- **Identity by instance.** A running server is bound to one account via the `GOOGLE_MCP_ACCOUNT` environment variable. To command three accounts, you run three instances of a service, each with a different `GOOGLE_MCP_ACCOUNT`. There is no per-call account argument, so a server cannot act on the wrong account. The shared host keeps the same rule per session: the account is the first segment of the session's URL path.
 
 ## Auth setup
 
