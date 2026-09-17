@@ -235,10 +235,12 @@ client spawns the stdio copy AND connects to the host. Restart existing
 client sessions after replacement so their stdio processes can shut down.
 
 For persistent sharing, use the [systemd user unit or launchd user agent
-template](./src/host/README.md#run-as-a-user-service). Install the binary globally
-on the supervisor's search path, or use an absolute path to `dist/host/index.js`.
+template](./src/host/README.md#run-as-a-user-service). Install the package
+globally and give the template the absolute directory holding `node` and the
+`google-mcp-host` shim; a supervisor does not see your shell's PATH, so a
+version-managed Node (nvm, fnm, volta) is invisible to it otherwise.
 Both templates read `$HOME/.google-mcp/host.env` (mode 0600) containing
-`GOOGLE_MCP_HOST_TOKEN='<secret>'`. On Linux, enable the unit with
+`GOOGLE_MCP_HOST_TOKEN=<secret>`. On Linux, enable the unit with
 `systemctl --user enable --now google-mcp-host`; use `loginctl enable-linger`
 for headless operation. WSL2 requires `[boot]` with `systemd=true` in
 `/etc/wsl.conf`. On macOS, bootstrap the user agent as shown in the template.

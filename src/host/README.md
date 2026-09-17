@@ -49,22 +49,21 @@ supervisor, such as systemd or launchd.
 
 ## Run as a user service
 
-Install with `npm install -g google-mcp-suite`. Run `google-mcp-host` from
-PATH, or use the absolute path to the package's `dist/host/index.js`. Ensure
-Node and the host executable are available to the supervisor; its search
-path may differ from your interactive shell. For systemd, use an absolute
-`ExecStart` path if the global npm bin is outside its executable search path.
+Install with `npm install -g google-mcp-suite`. A supervisor does not see
+your shell's PATH: a Node installed by nvm, fnm, or volta is invisible to it,
+and even an absolute path to the npm shim fails at its `#!/usr/bin/env node`
+line. Both templates below therefore take `<node-bin-directory>`, the
+absolute directory holding `node` and the global `google-mcp-host` shim
+(`dirname "$(command -v node)"` in a shell where the host runs).
 
 Keep the bearer token in `$HOME/.google-mcp/host.env` with mode 0600. Both
-supervisors below read that same file; use a shell-safe secret, such as a
-random hex string, in place of the placeholder:
+supervisors below read that same file; use a random hex string, which needs
+no quoting, in place of the placeholder:
 
 ```sh
 umask 077
 mkdir -p "$HOME/.google-mcp"
-cat > "$HOME/.google-mcp/host.env" <<'EOF'
-GOOGLE_MCP_HOST_TOKEN='<secret>'
-EOF
+printf 'GOOGLE_MCP_HOST_TOKEN=%s\n' "<secret>" > "$HOME/.google-mcp/host.env"
 chmod 600 "$HOME/.google-mcp/host.env"
 ```
 
@@ -77,13 +76,19 @@ Save as `$HOME/.config/systemd/user/google-mcp-host.service`:
 Description=Google MCP shared host
 
 [Service]
-ExecStart=google-mcp-host
+Environment=PATH=<node-bin-directory>:/usr/local/bin:/usr/bin:/bin
+ExecStart=<node-bin-directory>/google-mcp-host
 EnvironmentFile=%h/.google-mcp/host.env
 Restart=on-failure
+RestartSec=2
 
 [Install]
 WantedBy=default.target
 ```
+
+`Restart=on-failure` also retries the exit-1 "port in use" case until
+systemd's start limit trips, so if the unit flaps, probe the port first
+(below); another host already owns it.
 
 ```sh
 systemctl --user daemon-reload
@@ -98,7 +103,7 @@ in [Microsoft's systemd guide](https://learn.microsoft.com/en-us/windows/wsl/sys
 ### launchd user agent
 
 Save as `$HOME/Library/LaunchAgents/com.simiancraft.google-mcp-host.plist`.
-Replace `<node-and-host-bin-directory>` with the absolute directory containing
+Replace `<node-bin-directory>` with the absolute directory containing
 Node and the globally installed host, or list their directories separated by
 colons. Plist values do not expand `$HOME`; the shell command below does.
 The wrapper exports the same `host.env` file used by systemd and clients.
@@ -119,7 +124,7 @@ The wrapper exports the same `host.env` file used by systemd and clients.
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key>
-    <string>&lt;node-and-host-bin-directory&gt;:/usr/bin:/bin</string>
+    <string>&lt;node-bin-directory&gt;:/usr/bin:/bin</string>
   </dict>
   <key>RunAtLoad</key>
   <true/>
@@ -184,10 +189,10 @@ Codex CLI:
 codex mcp add <name> --url <url> --bearer-token-env-var GOOGLE_MCP_HOST_TOKEN
 ```
 
-This writes the following into `$HOME/.codex/config.toml`:
+This writes the equivalent of the following into `$HOME/.codex/config.toml`:
 
 ```toml
-[mcp_servers."<name>"]
+[mcp_servers.<name>]
 url = "http://127.0.0.1:8765/<account>/<service>"
 bearer_token_env_var = "GOOGLE_MCP_HOST_TOKEN"
 ```
@@ -254,8 +259,9 @@ This recovery is spec-mandated and unverified per client.
 
 The host logs one line per session open and close to stderr, and any request
 failure with its message (a missing token for an account shows up as a 500
-carrying `no token ...`; run `google-mcp-doctor auth <account>` and reconnect;
-each new session re-reads the token file). Observed once, with three
+carrying `ENOENT: no such file or directory, open '.../tokens/<account>.json'`;
+run `google-mcp-doctor auth <account>` and reconnect; each new session
+re-reads the token file). Observed once, with three
 concurrent `codex exec` runs and two concurrent `claude -p` runs: Codex closes
 its sessions on exit (one DELETE per server entry); Claude Code's
 non-interactive runs leave theirs open, so the reaper is what returns that

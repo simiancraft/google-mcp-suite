@@ -127,10 +127,10 @@ write the optional roster first, as [ADOPTING.md](./ADOPTING.md) step 3 does.
 
 ### Or one shared host
 
-Stdio is fine for one client; choose the host when several agents or sessions
-share the box. Each stdio entry above is a process per client session. On a machine running
-several agents at once (or a client that spawns MCP servers per thread and
-never closes them), that multiplies into hundreds of idle Node processes.
+Stdio is fine for one client. Each stdio entry above is a process per client
+session, so on a machine running several agents at once (or a client that
+spawns MCP servers per thread and never closes them), that multiplies into
+hundreds of idle Node processes.
 `google-mcp-host` serves every service for every roster account from one
 process over MCP's Streamable HTTP transport; each client connection is its
 own session, bound to the account in the path:
@@ -142,8 +142,8 @@ google-mcp-host                     # http://127.0.0.1:8765/<account>/<service>
 ```json
 {
   "mcpServers": {
-    "gmail-<account>": { "url": "http://127.0.0.1:8765/<account>/gmail" },
-    "calendar-<account>": { "url": "http://127.0.0.1:8765/<account>/calendar" }
+    "gmail-personal": { "url": "http://127.0.0.1:8765/personal/gmail" },
+    "calendar-work": { "url": "http://127.0.0.1:8765/work/calendar" }
   }
 }
 ```
@@ -151,8 +151,8 @@ google-mcp-host                     # http://127.0.0.1:8765/<account>/<service>
 Remove each old stdio entry before registering its URL: one name, one transport.
 Same operations, same instructions, same instance names; only the process
 count changes. Loopback-only by default, with an optional bearer token and idle
-session reaping: see [src/host/README.md](./src/host/README.md).
-For supervisor templates, liveness probes, transport replacement, tokens, and sessions, follow the [shared-host setup guide](./src/host/README.md#run-as-a-user-service).
+session reaping; supervisor templates, the liveness probe, per-client tokens,
+and session semantics are in [src/host/README.md](./src/host/README.md).
 
 Then ask your agent for something no single-account tool can do:
 
