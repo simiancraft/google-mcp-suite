@@ -21,7 +21,8 @@ src/
                 #   instructions, optionality, limits); utils/ = mechanisms;
                 #   testing/ = build-excluded test scaffolding
   <svc>/        # one folder per service (gmail, calendar, ...)
-    index.ts        # server({ name, title, description, instructions, operations, client }); the bin entry
+    service.ts      # export const service: ServiceDefinition<Client>; shared definition
+    index.ts        # await server(service); the stdio bin entry
     operation.ts    # <svc>Operation: operation() bound to the service's client type
     instructions.ts # the served usage paragraph (MCP initialize result); testable without booting
     capabilities.ts # regenerates CAPABILITIES.md from the registries (bun run capabilities)
@@ -125,7 +126,7 @@ Annotations section.
 Where Google publishes no MCP toolset at all (Sheets and Docs; the
 MCP-supported products are Gmail, Drive, Calendar, Chat, and People), the
 service is
-**methods-only**: no `tools/` folder, `index.ts` serves
+**methods-only**: no `tools/` folder, `service.ts` defines
 `mergeOperations(methods)`, and `capabilities.ts` renders a single
 `REST Method` section. The service's COVERAGE.md leads with why.
 
@@ -259,10 +260,11 @@ the tool/REST reference.
    `bin` entry `"google-mcp-<svc>": "./dist/<svc>/index.js"`.
 2. Add the service's scopes to the shared `SCOPES` union in `src/auth/config.ts`
    so each account is authorized once. Services do not declare scopes locally.
-3. `index.ts`: `server({ name, title, description, instructions,
+3. `service.ts`: export `const service: ServiceDefinition<Client> = {
+   name, title, description, instructions,
    operations: mergeOperations(tools, methods),
    client: async (a) => <svc>({ version, auth: await authorizedClient(a) }),
-   runAuth: runAuthFlow })`. `title`, `description`, and the package-homepage
+   runAuth: runAuthFlow, staleCredentials: isInvalidGrant }`. `title`, `description`, and the package-homepage
    `websiteUrl` default identify the server in client UIs (MCP
    `Implementation`); `instructions` is served in the initialize result, which
    clients typically inject into the agent's context at connect time. Write it
@@ -273,15 +275,20 @@ the tool/REST reference.
    `SOURCE_META_KEY`; never hand-typed), and `untrustedContentInstructions()`
    advisory (presence pinned by the surface pin), so the wing test can pin it
    without booting the server (`index.ts`'s import side
-   effect is `await server()`).
-   (`import { server } from '../lib/server.js'`,
+   effect is `await server(service)`).
+   In `service.ts`: (`import type { ServiceDefinition } from '../lib/server.js'`,
    `import { mergeOperations } from '../lib/operation.js'`,
-   `import { authorizedClient, runAuthFlow } from '../auth/oauth.js'`,
+   `import { authorizedClient, runAuthFlow, isInvalidGrant } from '../auth/oauth.js'`,
    `import { <svc> } from '@googleapis/<svc>'`,
    `import { tools } from './tools/registry.js'`,
    `import { methods } from './methods/registry.js'`). `mergeOperations` throws
    if a tool and a method share a wire name. The server's `version` defaults to
    the package version, so do not pass it.
+   `index.ts` is the stdio entry: import `server` from `../lib/server.js`,
+   import `service` from `./service.js`, and call `await server(service)`.
+   Register the service in both `src/suite/dispatch.ts` and
+   `src/host/services.ts`; drift tests tie both registries to the published
+   bins. The host imports the shared definition without starting stdio.
    Also add `src/<svc>/operation.ts`, the per-service binder: a one-liner
    exporting `<svc>Operation`, which is `operation()` bound to the service's
    client type (`sheets_v4.Sheets`, ...). Every op's `index.ts` uses the binder

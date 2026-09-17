@@ -9,7 +9,7 @@ This file is for working **on** the repo. To take the suite into service as a cl
 ```
 google-mcp-suite/
 └── src/
-    ├── auth/        # shared OAuth: authorizedClient(account), runAuthFlow(account), SCOPES
+    ├── auth/        # shared OAuth: authorizedClient(account), runAuthFlow(account), SCOPES, and loadAccounts() (account roster)
     ├── lib/         # the protocol surface: root files are the named domain ideas (operation, server, capabilities, instructions, optionality, limits); utils/ holds mechanisms; testing/ is build-excluded scaffolding
     ├── gmail/       # the canary server; new services mirror it as src/<service>/
     │   ├── service.ts        # the ServiceDefinition: { name, title, description, instructions, operations, client }
@@ -37,7 +37,7 @@ emits a self-contained package.
 
 ## Conventions (follow these)
 
-- **Auth lives once.** A service never implements OAuth. It imports from `src/auth` and calls `authorizedClient(account)` to get an authenticated client. If you find auth code in a service folder, it is a bug; lift it to `src/auth`.
+- **Auth lives once.** `src/auth/accounts.ts` owns account identity and the optional roster; `loadAccounts()` reads it for doctor and host, or infers accounts from token files. A service never implements OAuth. It imports from `src/auth` and calls `authorizedClient(account)` to get an authenticated client. If you find auth code in a service folder, it is a bug; lift it to `src/auth`.
 - **Identity by instance, not by argument.** A running server is bound to one account via the `GOOGLE_MCP_ACCOUNT` env var. Operations do not take an account parameter; multi-account is achieved by running one instance per account. The shared HTTP host keeps the rule with sessions instead of processes: each session is bound to the account in its URL path (`/<account>/<service>`), built from the same `ServiceDefinition` the stdio bin runs.
 - **B1 token model.** One shared OAuth client (`client_secret`). One token per account, granted the front-loaded scope union, authorized once. A service reads only the token for its configured account.
 - **Thin servers, folder-per-operation.** Each operation is a folder with three files: `schema.ts` (a single `schema: { input, output }` zod object, composing `entities/`), `handler.ts` (the work; a standalone `handler(client, args)` function), and `index.ts` (the definition: `export const <name> = operation({ description, annotations, source, schema, handler })`; `annotations` is the four-hint quad, `source` the transcribed reference page, emitted on the wire under `_meta['com.simiancraft.google-mcp/source']`), plus a colocated `handler.test.ts`. Every operation has the same `Operation` shape. The `lib` folder (`src/lib`) provides the two primitives, `operation()` and `server()`; never reimplement the protocol. `src/gmail` is the shape to copy.

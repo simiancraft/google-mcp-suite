@@ -51,7 +51,9 @@ not a TUI.
 ## The accounts roster (optional)
 
 Multi-account features (`auth --all`, `status`, login-hint prefill) read an
-optional roster at `<GOOGLE_MCP_DIR>/accounts.json`, kept outside the repo:
+optional roster at `<GOOGLE_MCP_DIR>/accounts.json`, kept outside the repo.
+`loadAccounts()` in `src/auth/accounts.ts` owns this account identity surface
+and shares it with the HTTP host:
 
 ```json
 [
@@ -88,7 +90,6 @@ src/doctor/
   diagnose.ts   # the `check` diagnostic and `scopes`
   status.ts     # token countdown + grantedScopes
   auth.ts       # the `auth` runner (target selection -> runAuthFlow)
-  accounts.ts   # the optional roster
   services.ts   # the service registry doctor checks
   browser.ts    # WSL-safe URL opener
 ```

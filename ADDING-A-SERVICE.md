@@ -90,9 +90,9 @@ Calendar shipped in 11 planned commits; the shape generalizes:
 | # | Commit | Content | Gate |
 |---|--------|---------|------|
 | 1 | `docs(<svc>): add the <svc> service plan` | the plan file | reviewed |
-| 2 | `feat(<svc>): scaffold the <svc> service skeleton` | empty registries, `index.ts` bootstrap, `capabilities.ts`, dep in package.json (the **bin lands with the doctor flip**: the bins-equal-implemented invariant test holds them together, and service bootstraps are knip entries) | check green; the bootstrap serves, `tools/list` returns 0 |
+| 2 | `feat(<svc>): scaffold the <svc> service skeleton` | empty registries, `service.ts` exporting `service: ServiceDefinition<Client>`, `index.ts` calling `await server(service)`, `capabilities.ts`, and dep in package.json (the **bin lands with the doctor flip**: the bins-equal-implemented invariant test holds them together, and service bootstraps are knip entries) | check green; the bootstrap serves, `tools/list` returns 0 |
 | 3..k | `feat(<svc>): add <cluster>` | operations in dependency order: read path first (it forces the entities and projections), then writes, then remaining tools, then methods grouped by REST resource. `operation.ts` (the `<svc>Operation` binder) lands with the **first** operation commit, not the scaffold: an unreferenced file fails knip's unused-file check (Calendar and Sheets both hit this) | check green after every commit; CAPABILITIES.md regenerated whenever a registry changes |
-| k+1 | `feat(doctor): register <svc> as implemented with a live probe` | flip `implemented: true`, add the probe, add the service to `services` in `src/suite/dispatch.ts` (the dispatch drift test forces this the moment the bin exists), **cover the probe in `services.probe.test.ts` by mocking the client module**. The probe must be a cheap, id-free, read-only call; when the API has none (Sheets has no list, every read takes an id), probe a stable public artifact (Sheets reads Google's docs sample spreadsheet), and when no stable public artifact exists either (Docs), read a sentinel id and treat a clean 404 as proof of auth and enablement; comment the tradeoff at the probe | check green; `bun run doctor` live-green per account |
+| k+1 | `feat(doctor): register <svc> as implemented with a live probe` | flip `implemented: true`, add the probe, and add the service to `services` in both `src/suite/dispatch.ts` and `src/host/services.ts` (drift tests tie both lists to the published bins), **cover the probe in `services.probe.test.ts` by mocking the client module**. The probe must be a cheap, id-free, read-only call; when the API has none (Sheets has no list, every read takes an id), probe a stable public artifact (Sheets reads Google's docs sample spreadsheet), and when no stable public artifact exists either (Docs), read a sentinel id and treat a clean 404 as proof of auth and enablement; comment the tradeoff at the probe | check green; `bun run doctor` live-green per account |
 | k+2 | `docs(<svc>): document the shipped service` | COVERAGE.md, service README, root README, AGENTS.md, package.json metadata, the icon, and `src/<svc>/instructions.ts` (the served usage paragraph; lands here because its test pins operation names against the finished registry) | check green; `bun run capabilities` produces no diff; links resolve |
 | k+3 | `docs(<svc>): delete the shipped plan` | remove the plan file | no references to it remain |
 
@@ -140,6 +140,9 @@ one of them is the kind of drift reviewers catch later:
   update its `alt`/`title` from "(planned)" to the plain service name; if no
   icon exists yet, create it bright.
 - `AGENTS.md`: the layout tree gains `<svc>/`.
+- `src/suite/dispatch.ts` and `src/host/services.ts`: verify that both registries
+  include the service alongside its published bin; the host imports only
+  `src/<svc>/service.ts`.
 - `package.json`: the `bin` entry landed with the doctor flip; now the
   `description` names the new service and `keywords` gain its terms.
 - Sweep for stale parentheticals: `grep -rn "Gmail, Drive"` style example
