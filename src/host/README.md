@@ -255,4 +255,8 @@ This recovery is spec-mandated and unverified per client.
 The host logs one line per session open and close to stderr, and any request
 failure with its message (a missing token for an account shows up as a 500
 carrying `no token ...`; run `google-mcp-doctor auth <account>` and reconnect;
-each new session re-reads the token file).
+each new session re-reads the token file). Observed once, with three
+concurrent `codex exec` runs and two concurrent `claude -p` runs: Codex closes
+its sessions on exit (one DELETE per server entry); Claude Code's
+non-interactive runs leave theirs open, so the reaper is what returns that
+memory. Neither client spawned a stdio process.
