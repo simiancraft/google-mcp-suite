@@ -47,7 +47,8 @@
     "google-mcp-sheets": "./dist/sheets/index.js",
     "google-mcp-docs": "./dist/docs/index.js",
     "google-mcp-drive": "./dist/drive/index.js",
-    "google-mcp-doctor": "./dist/doctor/index.js"
+    "google-mcp-doctor": "./dist/doctor/index.js",
+    "google-mcp-host": "./dist/host/index.js"
   },
   "files": [
     "dist",

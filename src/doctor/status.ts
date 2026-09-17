@@ -9,9 +9,9 @@
  */
 import { statSync } from 'node:fs';
 import { z } from 'zod';
+import { type Account, loadAccounts } from '../auth/accounts.js';
 import { tokenPath } from '../auth/config.js';
 import { readJsonFile } from '../lib/utils/json.js';
-import { type Account, loadAccounts } from './accounts.js';
 
 // The two token-file fields the doctor reads; tolerant of every other key.
 const TokenFile = z.object({

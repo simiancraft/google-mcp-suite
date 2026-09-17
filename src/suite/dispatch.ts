@@ -7,11 +7,13 @@
  */
 export const services = ['gmail', 'calendar', 'drive', 'docs', 'sheets'] as const;
 
+/** The peer CLIs that dispatch alongside the services: provisioning, and the shared host. */
+export const peers = ['doctor', 'host'] as const;
+
 // A Map, not an object literal: lookup must miss on inherited keys ('constructor').
-const entries = new Map<string, string>([
-  ...services.map((service) => [service, `../${service}/index.js`] as const),
-  ['doctor', '../doctor/index.js'],
-]);
+const entries = new Map<string, string>(
+  [...services, ...peers].map((name) => [name, `../${name}/index.js`] as const),
+);
 
 /**
  * The module specifier to import for a dispatchable name, or undefined. Specifiers
@@ -26,9 +28,11 @@ export const usage = `google-mcp-suite: per-account Google MCP servers, one proc
 
 Usage:
   google-mcp-suite <service>    start a server on stdio (${services.join(', ')})
+  google-mcp-suite host [...]   serve every service and account over Streamable HTTP (same as google-mcp-host)
   google-mcp-suite doctor [...] provisioning + auth health (same as google-mcp-doctor)
   google-mcp-suite help
 
-The account is chosen by the GOOGLE_MCP_ACCOUNT environment variable; run one
-instance per service per account. Each server also ships as its own bin
-(${services.map((service) => `google-mcp-${service}`).join(', ')}).`;
+On stdio the account is chosen by the GOOGLE_MCP_ACCOUNT environment variable;
+run one instance per service per account. Each server also ships as its own bin
+(${services.map((service) => `google-mcp-${service}`).join(', ')}). The host
+serves them all from one process at http://127.0.0.1:8765/<account>/<service>.`;

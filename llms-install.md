@@ -56,11 +56,20 @@ One instance per service per account, named `<service>-<account>`:
 
 For Claude Code, register with `claude mcp add --scope user <name> --env
 GOOGLE_MCP_ACCOUNT=<account> -- <bin>`; for OpenAI Codex CLI, `codex mcp add
-<name> --env GOOGLE_MCP_ACCOUNT=<account> -- <bin>`. See
+<name> --env GOOGLE_MCP_ACCOUNT=<account> -- <bin>`.
+
+If several agents or sessions share the machine, run `google-mcp-host` once
+instead (one process, every service, every account) and register each
+`<service>-<account>` name by URL: `http://127.0.0.1:8765/<account>/<service>`
+after removing the old stdio entry. For a token-protected host, use
+`claude mcp add --scope user --transport http <name> <url> --header "Authorization: Bearer <secret>"`
+or `codex mcp add <name> --url <url> --bearer-token-env-var GOOGLE_MCP_HOST_TOKEN`. See
 [ADOPTING.md](https://github.com/simiancraft/google-mcp-suite/blob/main/ADOPTING.md)
 for every client's path and for superseding a client's first-party Google
 surface (claude.ai connectors, OpenAI-curated plugins, Gemini's Workspace
 extension).
+
+For supervisor templates, liveness probes, transport replacement, tokens, and sessions, follow the [shared-host setup guide](https://github.com/simiancraft/google-mcp-suite/blob/main/src/host/README.md#run-as-a-user-service).
 
 ## 4. Verify
 

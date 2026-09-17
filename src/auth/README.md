@@ -11,6 +11,10 @@ imports this module instead of reimplementing auth.
   auto-refreshes the access token from the refresh token.
 - `runAuthFlow(account?)`: the browser consent flow; persists that account's token.
 - `SCOPES`: the front-loaded scope union across all planned services.
+- `loadAccounts()` from `src/auth/accounts.ts`: the account roster shared by
+  doctor and host. Auth owns account identity: each entry has a `label` and an
+  optional consent login-hint `email`. It reads `accounts.json` from the config
+  directory, or infers labels from token files when the roster is absent.
 
 ## Credential layout
 
@@ -18,6 +22,7 @@ Credentials live outside the repo, in a config directory (default `~/.google-mcp
 
 ```
 ~/.google-mcp/
+  accounts.json          # optional account roster, shared by doctor and host
   client_secret.json      # the shared OAuth client (Desktop app), from Google Cloud
   tokens/<account>.json   # per-account token, written 0600 inside a 0700 dir
 ```

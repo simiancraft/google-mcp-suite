@@ -4,9 +4,9 @@
  * next action: provisioning, accounts, services.
  */
 import { existsSync } from 'node:fs';
+import { type Account, loadAccounts } from '../auth/accounts.js';
 import { loadConfig, SCOPES } from '../auth/config.js';
 import { errorMessage } from '../lib/utils/error.js';
-import { type Account, loadAccounts } from './accounts.js';
 import { requiredApis, SERVICES, type ServiceInfo, scopeRegistryDrift } from './services.js';
 import { grantedScopes, humanizeRemaining, ICON, statusFor } from './status.js';
 

@@ -57,7 +57,8 @@ Adoption changes an enumerable set of things. Decommissioning removes that set.
    [Removing credentials](#removing-credentials-optional-destructive)).
 3. **MCP server entries**, named `<service>-<account>` (`gmail-personal`,
    `calendar-work`), one per service per account, registered at the client's
-   user/global scope.
+   user/global scope; either a stdio command per entry, or (with the shared
+   host) a `url` per entry pointing at `http://127.0.0.1:8765/<account>/<service>`.
 4. **Client-specific supersession settings** that stop the client preferring
    its own first-party Google surface (Claude Code: three `permissions.deny`
    strings; Codex CLI: `enabled = false` lines for any installed
@@ -216,6 +217,91 @@ requirement is satisfied by default; there is no scope flag to hunt for.
 
 **Gemini CLI**: the `mcpServers` JSON shape above, inside
 `~/.gemini/settings.json` (`gemini mcp add` also works).
+
+**Shared host (optional; one process for everything):** stdio is fine for
+one client. Choose the host when more than one agent or session runs on the
+box, or when the client spawns MCP servers per thread and never closes them
+(Codex `app-server` does). Process count and memory otherwise multiply by
+services, accounts, and sessions. Run `google-mcp-host` once under a supervisor
+and register the same `<service>-<account>` names by URL. The host serves every
+roster account at `http://127.0.0.1:8765/<account>/<service>`.
+
+Moving to HTTP is **one name, one transport**: remove the stdio entry first,
+then register the URL under that same name. For Claude Code, run
+`claude mcp remove --scope user <name>`. In Codex TOML, delete the entry's
+`command`, `args`, and `env` lines or tables. In `mcpServers` JSON, delete the
+old command entry before replacing it with the URL entry. Otherwise the
+client spawns the stdio copy AND connects to the host. Restart existing
+client sessions after replacement so their stdio processes can shut down.
+
+For persistent sharing, use the [systemd user unit or launchd user agent
+template](./src/host/README.md#run-as-a-user-service). Install the package
+globally and give the template the absolute directory holding `node` and the
+`google-mcp-host` shim; a supervisor does not see your shell's PATH, so a
+version-managed Node (nvm, fnm, volta) is invisible to it otherwise.
+Both templates read `$HOME/.google-mcp/host.env` (mode 0600) containing
+`GOOGLE_MCP_HOST_TOKEN=<secret>`. On Linux, enable the unit with
+`systemctl --user enable --now google-mcp-host`; use `loginctl enable-linger`
+for headless operation. WSL2 requires `[boot]` with `systemd=true` in
+`/etc/wsl.conf`. On macOS, bootstrap the user agent as shown in the template.
+
+Before launching, probe a served route without a session id:
+
+```sh
+curl -i --header "Authorization: Bearer <secret>" 'http://127.0.0.1:8765/<account>/gmail'
+```
+
+HTTP 400 with `No session; send an initialize request first` confirms liveness;
+404 means the route is not served, 401 means the token is missing or wrong,
+and connection refused means no host is listening there. The startup message
+`port 8765 is in use; a google-mcp-host is probably already running; point clients at it`
+(the selected port replaces 8765) is another signal; probe and reuse that
+listener instead of launching a duplicate.
+
+Use `<url>` = `http://127.0.0.1:8765/<account>/<service>`. Register each
+replacement with the token from `host.env`:
+
+```sh
+# Claude Code
+claude mcp add --scope user --transport http <name> <url> --header "Authorization: Bearer <secret>"
+# Codex CLI
+codex mcp add <name> --url <url> --bearer-token-env-var GOOGLE_MCP_HOST_TOKEN
+```
+
+Codex writes `bearer_token_env_var = "GOOGLE_MCP_HOST_TOKEN"` beside the URL
+in its TOML entry. Export the variable from `$HOME/.google-mcp/host.env`
+(mode 0600) before starting Codex: `set -a; . "$HOME/.google-mcp/host.env"; set +a`.
+The supervisor reads the same file; a GUI client must inherit the variable
+from its launch environment too.
+
+For JSON clients that support HTTP headers:
+
+```json
+{
+  "mcpServers": {
+    "<name>": {
+      "url": "http://127.0.0.1:8765/<account>/<service>",
+      "headers": { "Authorization": "Bearer <secret>" }
+    }
+  }
+}
+```
+
+Claude and JSON header entries hold the literal secret from `host.env`;
+update them when it changes.
+
+Identity is unchanged (one account per session, chosen by the path), the
+operations and instructions are the stdio bins', and step 7 verifies it the
+same way. On a shared machine set `--token` (or `GOOGLE_MCP_HOST_TOKEN`) and
+pass it as an `Authorization: Bearer` header from each client; see
+[src/host/README.md](./src/host/README.md).
+
+Each logical client connection has its own session. Idle time runs from the
+last request; an open SSE stream does not keep it alive. After `--idle`
+minutes (default 720), the host reaps the session, and its old id receives
+404. The client must initialize again without that id, as required by the
+[MCP session specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#session-management).
+Recovery is spec-mandated and unverified per client.
 
 **Cloud-sandboxed agents (Google Jules and similar):** out of scope. Jules
 connects only to an allowlist of hosted MCP servers, with no way to run an
@@ -377,7 +463,10 @@ only what adoption added.
    ```
 
    Other clients: delete the corresponding `mcpServers` / `[mcp_servers.*]`
-   entries.
+   entries. If adoption ran the shared host, stop its process (and remove the
+   supervisor unit that started it) once the `url` entries are gone.
+   Also remove any leftover stdio registrations for those names; moving to
+   the host must replace the old transport, not leave both configured.
 4. **Uninstall the package** (optional):
 
    ```sh
