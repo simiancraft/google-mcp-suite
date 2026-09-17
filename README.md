@@ -127,7 +127,8 @@ write the optional roster first, as [ADOPTING.md](./ADOPTING.md) step 3 does.
 
 ### Or one shared host
 
-Each stdio entry above is a process per client session. On a machine running
+Stdio is fine for one client; choose the host when several agents or sessions
+share the box. Each stdio entry above is a process per client session. On a machine running
 several agents at once (or a client that spawns MCP servers per thread and
 never closes them), that multiplies into hundreds of idle Node processes.
 `google-mcp-host` serves every service for every roster account from one
@@ -141,15 +142,17 @@ google-mcp-host                     # http://127.0.0.1:8765/<account>/<service>
 ```json
 {
   "mcpServers": {
-    "gmail-personal": { "url": "http://127.0.0.1:8765/personal/gmail" },
-    "calendar-work": { "url": "http://127.0.0.1:8765/work/calendar" }
+    "gmail-<account>": { "url": "http://127.0.0.1:8765/<account>/gmail" },
+    "calendar-<account>": { "url": "http://127.0.0.1:8765/<account>/calendar" }
   }
 }
 ```
 
+Remove each old stdio entry before registering its URL: one name, one transport.
 Same operations, same instructions, same instance names; only the process
 count changes. Loopback-only by default, with an optional bearer token and idle
 session reaping: see [src/host/README.md](./src/host/README.md).
+For supervisor templates, liveness probes, transport replacement, tokens, and sessions, follow the [shared-host setup guide](./src/host/README.md#run-as-a-user-service).
 
 Then ask your agent for something no single-account tool can do:
 
