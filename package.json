@@ -1,6 +1,6 @@
 {
   "name": "google-mcp-suite",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "type": "module",
   "description": "Google Workspace MCP servers for AI agents, one per service per account: Gmail, Google Calendar, Google Drive, Google Docs, and Google Sheets. Identity is bound to the running instance, so an agent (Claude, Cursor, or any MCP client) can never act on the wrong account; each server exposes Google's curated MCP toolset (where one exists) plus the broader REST surface.",
   "keywords": [

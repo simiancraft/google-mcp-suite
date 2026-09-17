@@ -1,3 +1,25 @@
+## [1.21.0](https://github.com/simiancraft/google-mcp-suite/compare/v1.20.0...v1.21.0) (2026-09-17)
+
+### Features
+
+* **host:** serve every service and account over Streamable HTTP ([#106](https://github.com/simiancraft/google-mcp-suite/issues/106)) ([aa1208a](https://github.com/simiancraft/google-mcp-suite/commit/aa1208a1fcc95dbd79a566a275fe94c3a1e09ad0))
+
+### Bug Fixes
+
+* **host:** bind sessions to their route and guard startup and requests ([3db6e1e](https://github.com/simiancraft/google-mcp-suite/commit/3db6e1e82a932019e41c6b1d6c816f09a012ffbc))
+
+### Refactoring
+
+* **auth:** lift the account roster from doctor into auth ([6de7362](https://github.com/simiancraft/google-mcp-suite/commit/6de7362027708d9d2183fe8ca596de15882bd8c3))
+* **lib:** split createServer() from the stdio runner; services export their definition ([3013444](https://github.com/simiancraft/google-mcp-suite/commit/3013444e505cc68df49a110eee18689a86378fe5))
+
+### Documentation
+
+* align the service recipe with service.ts and the roster move ([e278f55](https://github.com/simiancraft/google-mcp-suite/commit/e278f5550600615057e2736600182fbc6dbe02f2))
+* **host:** correct the supervisor templates and the missing-token message ([890e729](https://github.com/simiancraft/google-mcp-suite/commit/890e729d0452ff3d2ec52232b6659715d5fe70ae))
+* **host:** document sharing the host between agents ([fb3fe50](https://github.com/simiancraft/google-mcp-suite/commit/fb3fe5089ae68bdbf6efae7a11abb13c9c8972ca))
+* **host:** record observed session close behavior per client ([4cdfd8b](https://github.com/simiancraft/google-mcp-suite/commit/4cdfd8b93cc808c33538713813fc12d4ff3c279a))
+
 ## [1.20.0](https://github.com/simiancraft/google-mcp-suite/compare/v1.19.0...v1.20.0) (2026-09-01)
 
 ### Features
