@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it, mock, spyOn } from 'bun:test';
-import { request as httpRequest } from 'node:http';
+import { request as httpRequest, IncomingMessage } from 'node:http';
+import { Socket } from 'node:net';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { z } from 'zod';
 import { operation } from '../lib/operation.js';
 import { createServer } from '../lib/server.js';
-import { allowedHosts, type Host, host, route, type ServiceFactory } from './host.js';
+import { allowedHosts, type Host, host, readBody, route, type ServiceFactory } from './host.js';
 
 type FakeClient = { account: string };
 
@@ -88,6 +89,19 @@ describe('route', () => {
   });
 });
 
+describe('readBody', () => {
+  it('settles on stream errors and aborts without waiting for end', async () => {
+    for (const event of ['error', 'aborted']) {
+      const req = new IncomingMessage(new Socket());
+      const pending = readBody(req, 64);
+      req.emit('data', Buffer.from('{'));
+      req.emit(event, new Error('connection interrupted'));
+      expect(await pending).toBeNull();
+      req.destroy();
+    }
+  });
+});
+
 describe('allowedHosts', () => {
   it('names the three loopback spellings for a loopback bind', () => {
     expect(allowedHosts('127.0.0.1', 8765)).toEqual([
@@ -121,6 +135,77 @@ describe('host', () => {
     await a.transport.terminateSession();
     expect(h.sessions()).toBe(1);
     await b.mcp.close();
+  });
+
+  it('rejects a session on another account or service path', async () => {
+    const h = await start({ services: { echo, other: echo } });
+    const { mcp, transport } = await connect(`${h.url}/personal/echo`);
+    for (const path of ['/work/echo', '/personal/other']) {
+      for (const method of ['POST', 'GET', 'DELETE']) {
+        const res = await fetch(`${h.url}${path}`, {
+          method,
+          headers: { ...headers, 'mcp-session-id': transport.sessionId! },
+          ...(method === 'POST'
+            ? { body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }) }
+            : {}),
+        });
+        expect(res.status).toBe(404);
+        expect(await res.json()).toEqual({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Session not found on this path; initialize a new one' },
+          id: null,
+        });
+      }
+    }
+    expect(h.sessions()).toBe(1);
+    expect((await mcp.callTool({ name: 'whoami', arguments: {} })).structuredContent).toEqual({
+      account: 'personal',
+    });
+    await mcp.close();
+  });
+
+  it('rejects a listen failure and reports an occupied port from the CLI', async () => {
+    const h = await start();
+    await expect(start({ port: h.port })).rejects.toMatchObject({ code: 'EADDRINUSE' });
+    const child = Bun.spawn(
+      ['node', 'dist/host/index.js', '--port', String(h.port), '--account', 'test'],
+      {
+        stdout: 'pipe',
+        stderr: 'pipe',
+      },
+    );
+    expect(await child.exited).toBe(1);
+    expect(await new Response(child.stderr).text()).toBe(
+      `google-mcp-host: port ${h.port} is in use; a google-mcp-host is probably already running; point clients at it\n`,
+    );
+  });
+
+  it('requires a nonempty token for a non-loopback bind, including the CLI', async () => {
+    for (const hostname of ['0.0.0.0', '::', '192.0.2.1']) {
+      await expect(start({ hostname })).rejects.toThrow(
+        'a non-loopback --host requires --token or GOOGLE_MCP_HOST_TOKEN',
+      );
+      await expect(start({ hostname, token: '' })).rejects.toThrow(
+        'a non-loopback --host requires',
+      );
+    }
+    const child = Bun.spawn(
+      ['node', 'dist/host/index.js', '--host', '0.0.0.0', '--account', 'test'],
+      {
+        env: { ...process.env, GOOGLE_MCP_HOST_TOKEN: '' },
+        stdout: 'pipe',
+        stderr: 'pipe',
+      },
+    );
+    expect(await child.exited).toBe(1);
+    expect(await new Response(child.stderr).text()).toBe(
+      'google-mcp-host: a non-loopback --host requires --token or GOOGLE_MCP_HOST_TOKEN\n',
+    );
+    const h = await start({ hostname: '0.0.0.0', token: 'secret' });
+    const res = await fetch(`http://127.0.0.1:${h.port}/personal/echo`, {
+      headers: { authorization: 'Bearer secret' },
+    });
+    expect(res.status).toBe(400);
   });
 
   it('hands the account label to the service factory', async () => {
@@ -195,6 +280,46 @@ describe('host', () => {
     expect(res.status).toBe(413);
   });
 
+  it('closes an overflowing stream before the client finishes sending', async () => {
+    const h = await start({ maxBodyBytes: 64 });
+    const status = await new Promise<number>((resolve, reject) => {
+      let responseStatus = 0;
+      const req = httpRequest(
+        `${h.url}/personal/echo`,
+        {
+          method: 'POST',
+          headers: { ...headers, 'content-length': '1000000', connection: 'keep-alive' },
+        },
+        (res) => {
+          res.resume();
+          responseStatus = res.statusCode!;
+        },
+      );
+      req.on('socket', (socket) => socket.once('close', () => resolve(responseStatus)));
+      req.on('error', reject);
+      req.write('x'.repeat(65));
+    });
+    expect(status).toBe(413);
+    expect(h.sessions()).toBe(0);
+  });
+
+  it('keeps serving after a client aborts a partial body', async () => {
+    const h = await start();
+    await new Promise<void>((resolve) => {
+      const req = httpRequest(`${h.url}/personal/echo`, {
+        method: 'POST',
+        headers: { ...headers, 'content-length': '1000' },
+      });
+      req.on('error', () => {});
+      req.on('close', resolve);
+      req.write('{');
+      setTimeout(() => req.destroy(), 20);
+    });
+    const { mcp } = await connect(`${h.url}/personal/echo`);
+    expect((await mcp.listTools()).tools).toHaveLength(1);
+    await mcp.close();
+  });
+
   it('requires the bearer token when one is configured', async () => {
     const h = await start({ token: 'secret' });
     const bare = await fetch(`${h.url}/personal/echo`, {
@@ -223,6 +348,21 @@ describe('host', () => {
     await mcp.close();
   });
 
+  it('accepts any bearer scheme casing but compares the token exactly', async () => {
+    const h = await start({ token: 'Secret' });
+    for (const scheme of ['bearer', 'Bearer', 'BEARER', 'bEaReR']) {
+      const { mcp } = await connect(`${h.url}/personal/echo`, {
+        headers: { authorization: `${scheme} Secret` },
+      });
+      expect((await mcp.listTools()).tools).toHaveLength(1);
+      await mcp.close();
+    }
+    for (const authorization of ['bearer secret', 'Basic Secret', 'BearerSecret']) {
+      const res = await fetch(`${h.url}/personal/echo`, { headers: { authorization } });
+      expect(res.status).toBe(401);
+    }
+  });
+
   it('rejects a Host header that is not this machine (DNS rebinding)', async () => {
     const h = await start();
     const status = await new Promise<number>((resolve) => {
@@ -242,6 +382,56 @@ describe('host', () => {
       req.end(JSON.stringify(initialize));
     });
     expect(status).toBe(403);
+  });
+
+  it('validates Host and Origin before authentication, routing, methods, and body parsing', async () => {
+    const factory = mock(echo);
+    const h = await start({ token: 'secret', maxBodyBytes: 64, services: { echo: factory } });
+    for (const untrusted of [
+      { host: 'evil.example' },
+      { origin: 'https://evil.example' },
+      { origin: 'null' },
+      { origin: 'http://localhost:1' },
+    ]) {
+      for (const [path, method, authorization, body] of [
+        ['/personal/echo', 'GET', '', ''],
+        ['/unknown/echo', 'GET', 'Bearer secret', ''],
+        ['/personal/echo', 'PUT', 'Bearer secret', ''],
+        ['/personal/echo', 'POST', 'Bearer secret', '{invalid'],
+        ['/personal/echo', 'POST', 'Bearer secret', 'x'.repeat(100)],
+      ]) {
+        const status = await new Promise<number>((resolve) => {
+          const req = httpRequest(
+            {
+              host: '127.0.0.1',
+              port: h.port,
+              path,
+              method,
+              headers: { ...headers, authorization, ...untrusted },
+            },
+            (res) => {
+              res.resume();
+              resolve(res.statusCode!);
+            },
+          );
+          req.end(body);
+        });
+        expect(status).toBe(403);
+      }
+    }
+    expect(factory).not.toHaveBeenCalled();
+    expect(h.sessions()).toBe(0);
+  });
+
+  it('accepts each loopback origin through initialization and session requests', async () => {
+    const h = await start();
+    for (const authority of allowedHosts('127.0.0.1', h.port)!) {
+      const { mcp } = await connect(`${h.url}/personal/echo`, {
+        headers: { origin: `http://${authority}` },
+      });
+      expect((await mcp.listTools()).tools).toHaveLength(1);
+      await mcp.close();
+    }
   });
 
   it('reaps sessions idle past the limit, and the client then sees 404', async () => {

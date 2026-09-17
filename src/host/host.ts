@@ -24,7 +24,7 @@ export type HostOptions = {
   /**
    * Shared secret every request must present as `Authorization: Bearer <token>`.
    * Optional on loopback, where the OS already limits callers to this machine;
-   * required in practice when binding anything else.
+   * required when binding anything else.
    */
   token?: string;
   /** Idle time after which a session is closed; defaults to 12 hours. */
@@ -67,6 +67,10 @@ export function allowedHosts(hostname: string, port: number): string[] | undefin
   return [`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`];
 }
 
+function allowedOrigins(hostname: string, port: number): string[] | undefined {
+  return allowedHosts(hostname, port)?.map((host) => `http://${host}`);
+}
+
 /** Parse `/<account>/<service>` from a request URL; null for any other shape. */
 export function route(url: string | undefined): { account: string; service: string } | null {
   const path = new URL(url ?? '/', 'http://host').pathname;
@@ -77,19 +81,23 @@ export function route(url: string | undefined): { account: string; service: stri
 }
 
 function bearerMatches(header: string | undefined, token: string): boolean {
-  const presented = header?.startsWith('Bearer ') ? header.slice(7) : '';
+  const presented = header?.slice(0, 7).toLowerCase() === 'bearer ' ? header.slice(7) : '';
   const a = Buffer.from(presented);
   const b = Buffer.from(token);
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-function readBody(req: IncomingMessage, limit: number): Promise<string | null> {
+/** Read a bounded body; null means overflow or an interrupted stream. */
+export function readBody(req: IncomingMessage, limit: number): Promise<string | null> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
     let size = 0;
+    req.once('error', () => resolve(null));
+    req.once('aborted', () => resolve(null));
     req.on('data', (chunk: Buffer) => {
       size += chunk.length;
       if (size > limit) {
+        req.pause();
         req.removeAllListeners('data');
         req.removeAllListeners('end');
         resolve(null);
@@ -127,6 +135,9 @@ export async function host(options: HostOptions): Promise<Host> {
     now = Date.now,
     log = (line) => console.error(line),
   } = options;
+  if (!allowedHosts(hostname, options.port ?? 8765) && !token) {
+    throw new Error('a non-loopback --host requires --token or GOOGLE_MCP_HOST_TOKEN');
+  }
   const sessions = new Map<string, Session>();
   const accountSet = new Set(accounts);
   // Bound port, known only after listen(); the rebinding allow-list needs it.
@@ -141,9 +152,12 @@ export async function host(options: HostOptions): Promise<Host> {
   ): Promise<void> {
     const routeName = `${target.account}/${target.service}`;
     const hosts = allowedHosts(hostname, port);
+    const origins = allowedOrigins(hostname, port);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: randomUUID,
-      ...(hosts ? { allowedHosts: hosts, enableDnsRebindingProtection: true } : {}),
+      ...(hosts && origins
+        ? { allowedHosts: hosts, allowedOrigins: origins, enableDnsRebindingProtection: true }
+        : {}),
       onsessioninitialized: (id) => {
         sessions.set(id, { transport, route: routeName, lastSeen: now() });
         log(`session ${id} opened on /${routeName} (${sessions.size} live)`);
@@ -164,6 +178,16 @@ export async function host(options: HostOptions): Promise<Host> {
   }
 
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const hosts = allowedHosts(hostname, port);
+    if (hosts && !hosts.includes(req.headers.host ?? '')) {
+      reply(res, 403, 'Forbidden: invalid Host header');
+      return;
+    }
+    const origins = allowedOrigins(hostname, port);
+    if (origins && req.headers.origin !== undefined && !origins.includes(req.headers.origin)) {
+      reply(res, 403, 'Forbidden: invalid Origin header');
+      return;
+    }
     if (token !== undefined && !bearerMatches(req.headers.authorization, token)) {
       reply(res, 401, 'Unauthorized: a bearer token is required');
       return;
@@ -189,11 +213,18 @@ export async function host(options: HostOptions): Promise<Host> {
       return;
     }
 
+    if (session && session.route !== `${target.account}/${target.service}`) {
+      reply(res, 404, 'Session not found on this path; initialize a new one');
+      return;
+    }
+
     let body: unknown;
     if (req.method === 'POST') {
       const raw = await readBody(req, maxBodyBytes);
       if (raw === null) {
+        if (req.destroyed) return;
         reply(res, 413, `Request body exceeds ${maxBodyBytes} bytes`);
+        req.destroy();
         return;
       }
       try {
@@ -226,7 +257,10 @@ export async function host(options: HostOptions): Promise<Host> {
       else reply(res, 500, message);
     });
   });
-  await new Promise<void>((resolve) => listener.listen(port, hostname, resolve));
+  await new Promise<void>((resolve, reject) => {
+    listener.once('error', reject);
+    listener.listen(port, hostname, resolve);
+  });
   const address = listener.address();
   port = typeof address === 'object' && address !== null ? address.port : port;
   const url = `http://${hostname}:${port}`;

@@ -2,7 +2,7 @@
 import { loadAccounts } from '../auth/accounts.js';
 import { errorMessage } from '../lib/utils/error.js';
 import { type HostCli, parse, usage } from './cli.js';
-import { host } from './host.js';
+import { type Host, host } from './host.js';
 import { services } from './services.js';
 
 let cli: HostCli;
@@ -25,14 +25,24 @@ if (accounts.length === 0) {
   process.exit(1);
 }
 
-const running = await host({
-  services,
-  accounts,
-  hostname: cli.hostname,
-  port: cli.port,
-  idleMs: cli.idleMs,
-  ...(cli.token === undefined ? {} : { token: cli.token }),
-});
+let running: Host;
+try {
+  running = await host({
+    services,
+    accounts,
+    hostname: cli.hostname,
+    port: cli.port,
+    idleMs: cli.idleMs,
+    ...(cli.token === undefined ? {} : { token: cli.token }),
+  });
+} catch (error) {
+  const message =
+    error instanceof Error && 'code' in error && error.code === 'EADDRINUSE'
+      ? `port ${cli.port} is in use; a google-mcp-host is probably already running; point clients at it`
+      : errorMessage(error);
+  console.error(`google-mcp-host: ${message}`);
+  process.exit(1);
+}
 for (const account of accounts) {
   for (const service of Object.keys(services)) {
     console.error(`  ${running.url}/${account}/${service}`);

@@ -26,12 +26,12 @@ it and may repeat.
 
   --port     TCP port (default ${DEFAULT_PORT})
   --host     interface to bind (default 127.0.0.1; bind anything else only with --token)
-  --idle     minutes before an idle session is closed (default ${DEFAULT_IDLE_MINUTES})
+  --idle     minutes before an idle session is closed (minimum 1; default ${DEFAULT_IDLE_MINUTES})
   --token    bearer token every request must carry (default: $GOOGLE_MCP_HOST_TOKEN)
   --account  serve only this account label (repeatable)
   --help     this text`;
 
-function positiveInt(name: string, raw: string): number {
+function nonNegativeInt(name: string, raw: string): number {
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 0) {
     throw new Error(`--${name} must be a non-negative integer, got ${JSON.stringify(raw)}`);
@@ -55,8 +55,10 @@ export function parse(argv: string[], env: NodeJS.ProcessEnv = process.env): Hos
     allowPositionals: false,
   });
   if (values.help) return { help: usage };
-  const port = values.port === undefined ? DEFAULT_PORT : positiveInt('port', values.port);
-  const idle = values.idle === undefined ? DEFAULT_IDLE_MINUTES : positiveInt('idle', values.idle);
+  const port = values.port === undefined ? DEFAULT_PORT : nonNegativeInt('port', values.port);
+  const idle =
+    values.idle === undefined ? DEFAULT_IDLE_MINUTES : nonNegativeInt('idle', values.idle);
+  if (idle < 1) throw new Error('--idle must be at least 1 minute');
   return {
     port,
     hostname: values.host ?? '127.0.0.1',

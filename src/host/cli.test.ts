@@ -61,6 +61,12 @@ describe('parse', () => {
     expect(() => parse(['--idle', '1.5'], {})).toThrow(/--idle must be a non-negative integer/);
   });
 
+  it('requires at least one idle minute while allowing an ephemeral port', () => {
+    expect(() => parse(['--idle', '0'], {})).toThrow('--idle must be at least 1 minute');
+    expect(() => parse(['--idle', '-1'], {})).toThrow('--idle');
+    expect(parse(['--idle', '1', '--port', '0'], {})).toMatchObject({ idleMs: 60_000, port: 0 });
+  });
+
   it('rejects unknown flags and positionals', () => {
     expect(() => parse(['--nope'], {})).toThrow();
     expect(() => parse(['gmail'], {})).toThrow();
