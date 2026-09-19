@@ -1,19 +1,61 @@
 import { describe, expect, it } from 'bun:test';
 import type { gmail_v1 } from '@googleapis/gmail';
-import { buildRawMessage, projectDraft, projectMessage } from './message.js';
+import { buildRawMessage, plainTextToHtml, projectDraft, projectMessage } from './message.js';
 
 const decode = (raw: string) => Buffer.from(raw, 'base64url').toString('utf8');
 const b64 = (s: string) => Buffer.from(s).toString('base64url');
 
+describe('plainTextToHtml', () => {
+  it.each([
+    ['', ''],
+    ['a\n\nb', '<p>a</p><p>b</p>'],
+    ['a\nb', '<p>a<br>b</p>'],
+    ['\n\na\n\n\nb\n\n', '<p>a</p><p>b</p>'],
+    ['a\r\nb\r\n\r\nc', '<p>a<br>b</p><p>c</p>'],
+    ['a\n \t\nb', '<p>a</p><p>b</p>'],
+    [' \t\r\n \n', ''],
+    [`<&"'> &amp;`, '<p>&lt;&amp;&quot;&#39;&gt; &amp;amp;</p>'],
+  ])('converts %j to %j', (body, html) => {
+    expect(plainTextToHtml(body)).toBe(html);
+  });
+});
+
 describe('buildRawMessage', () => {
   const from = 'me@example.com';
 
-  it('plain-text only, with From and To', () => {
-    const out = decode(buildRawMessage({ from, to: ['a@b.com'], subject: 'S', body: 'plain' }));
+  it('derives an HTML alternative from body, with From and To', () => {
+    const out = decode(buildRawMessage({ from, to: ['a@b.com'], subject: 'S', body: 'a\n\nb' }));
     expect(out).toContain('From: <me@example.com>');
     expect(out).toContain('a@b.com');
     expect(out).toContain('Content-Type: text/plain');
-    expect(out).toContain('plain');
+    expect(out).toContain('Content-Type: multipart/alternative');
+    expect(out).toContain('Content-Type: text/html');
+    expect(out).toContain('\r\na\n\nb\r\n');
+    expect(out).toContain('<p>a</p><p>b</p>');
+  });
+
+  it('keeps an omitted body as a single empty plain-text part', () => {
+    const out = decode(buildRawMessage({ from, to: ['a@b.com'] }));
+    expect(out).toContain('Content-Type: text/plain');
+    expect(out).not.toContain('text/html');
+    expect(out).not.toContain('multipart/');
+  });
+
+  it.each(['', '<p title="a & b">  Hello &amp; goodbye\n</p>'])(
+    'preserves supplied HTML byte-for-byte: %j',
+    (htmlBody) => {
+      const out = decode(buildRawMessage({ from, to: ['a@b.com'], body: 'plain', htmlBody }));
+      const html = out.match(/Content-Type: text\/html.*?\r\n\r\n(.*?)\r\n\r\n--/s);
+      expect(html?.[1]).toBe(htmlBody);
+      expect(out).not.toContain('<p>plain</p>');
+    },
+  );
+
+  it('adds an HTML alternative for an explicitly empty body', () => {
+    const out = decode(buildRawMessage({ from, to: ['a@b.com'], body: '' }));
+    expect(out).toContain('Content-Type: multipart/alternative');
+    expect(out).toContain('Content-Type: text/plain');
+    expect(out).toContain('Content-Type: text/html');
   });
 
   it('HTML only', () => {
@@ -67,6 +109,32 @@ describe('buildRawMessage', () => {
     expect(out).toContain(data);
     expect(out).toContain('plain');
     expect(out).toContain('<b>hi</b>');
+  });
+
+  it('wraps the derived alternative in multipart/mixed with attachments', () => {
+    const data = Buffer.from('pdf bytes').toString('base64');
+    const out = decode(
+      buildRawMessage({
+        from,
+        to: ['a@b.com'],
+        body: 'a\n\nb',
+        attachments: [{ filename: 'packet.pdf', contentType: 'application/pdf', data }],
+      }),
+    );
+    const mixed = out.match(/Content-Type: multipart\/mixed; boundary=(\w+)/);
+    const alternative = out.match(/Content-Type: multipart\/alternative; boundary=(\w+)/);
+    expect(mixed).not.toBeNull();
+    expect(alternative).not.toBeNull();
+    expect(out).toContain(`--${mixed?.[1]}\r\nContent-Type: multipart/alternative`);
+    expect(out).toContain(`--${alternative?.[1]}\r\nContent-Type: text/plain`);
+    expect(out).toContain(`--${alternative?.[1]}\r\nContent-Type: text/html`);
+    expect(out).toContain('\r\na\n\nb\r\n');
+    expect(out).toContain('<p>a</p><p>b</p>');
+    expect(out).toContain(
+      `--${alternative?.[1]}--\r\n--${mixed?.[1]}\r\nContent-Type: application/pdf`,
+    );
+    expect(out).toContain('Content-Disposition: attachment; filename="packet.pdf"');
+    expect(out).toContain(data);
   });
 
   it('strips CR/LF from header fields to block header injection', () => {

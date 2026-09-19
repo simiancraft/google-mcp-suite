@@ -164,6 +164,22 @@ export function projectDraft(draft: gmail_v1.Schema$Draft): Draft {
   };
 }
 
+/** Derive HTML paragraphs from plain text, ignoring outer whitespace. */
+export function plainTextToHtml(body: string): string {
+  return body
+    .replace(/\r\n/g, '\n')
+    .trim()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .split(/\n(?:[ \t]*\n)+/)
+    .filter(Boolean)
+    .map((paragraph) => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
 /**
  * Build an RFC 822 message and base64url-encode it for the Gmail API, via
  * mail-mime-builder (RFC 2822/2045/2049 compliant: encoded-word headers,
@@ -205,6 +221,8 @@ export function buildRawMessage(args: {
   }
   if (args.htmlBody !== undefined) {
     msg.addMessage({ contentType: 'text/html', data: args.htmlBody });
+  } else if (args.body !== undefined) {
+    msg.addMessage({ contentType: 'text/html', data: plainTextToHtml(args.body) });
   }
   if (args.body === undefined && args.htmlBody === undefined) {
     msg.addMessage({ contentType: 'text/plain', data: '' });
