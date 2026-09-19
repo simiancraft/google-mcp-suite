@@ -19,6 +19,7 @@ export async function handler(
 
   const threads = (data.threads ?? []).map((thread) => ({
     id: thread.id ?? '',
+    historyId: thread.historyId ?? undefined,
     snippet: thread.snippet ?? undefined,
     messages: [],
   }));

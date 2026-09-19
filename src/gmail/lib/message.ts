@@ -133,6 +133,7 @@ export function projectMessage(message: gmail_v1.Schema$Message): Message {
   collectBodies(message.payload, bodies);
   return {
     id: message.id ?? '',
+    historyId: message.historyId ?? undefined,
     snippet: message.snippet ?? undefined,
     subject: headers['subject'],
     sender: firstAddress(headers['from']),
