@@ -13,6 +13,12 @@ import { Message } from './Message.js';
  */
 export const Thread = z.object({
   id: z.string().describe('The unique identifier of the thread.'),
+  historyId: z
+    .string()
+    .optional()
+    .describe(
+      'The ID of the last history record modifying this thread; use as startHistoryId for list_history.',
+    ),
   snippet: z
     .string()
     .optional()
