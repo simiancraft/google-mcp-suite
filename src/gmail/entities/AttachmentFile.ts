@@ -4,9 +4,8 @@ import { headerSafe } from '../lib/headers.js';
 
 /**
  * A local file to attach to an outgoing message. A suite extension, not a
- * Google noun: the Gmail API's compose surface takes attachments only inside
- * the documented `raw` RFC 822 field (a documented API field, not a
- * workaround), so the compose operations (`create_draft`, `update_draft`,
+ * Google noun: Gmail takes attachments inside RFC 822 media, so the
+ * compose operations (`create_draft`, `update_draft`,
  * `send_message`) accept this shape and the server assembles the MIME message
  * itself (issue #101 is the provenance).
  * @see https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages#Message

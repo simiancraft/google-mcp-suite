@@ -1,3 +1,4 @@
+import { MESSAGE_CAP_LABEL } from '../../lib/limits.js';
 import { gmailOperation } from '../../operation.js';
 import { handler } from './handler.js';
 import { schema } from './schema.js';
@@ -10,7 +11,9 @@ import { schema } from './schema.js';
  * re-fetched `full` for projection.
  */
 export const create_draft = gmailOperation({
-  description: 'Create a draft email, optionally attaching local files.',
+  description:
+    'Create a draft email, optionally attaching local files. ' +
+    `The complete MIME-encoded message is capped at ${MESSAGE_CAP_LABEL}.`,
   annotations: {
     readOnlyHint: false,
     destructiveHint: false,

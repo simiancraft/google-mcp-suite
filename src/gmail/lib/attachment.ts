@@ -1,9 +1,9 @@
 import { open } from 'node:fs/promises';
 import { basename, extname } from 'node:path';
-import { assertWithinDownloadCap, MIB_LABEL } from '../../lib/limits.js';
 import { ownLookup } from '../../lib/utils/lookup.js';
 import type { AttachmentFile } from '../entities/AttachmentFile.js';
 import { headerParamSafe } from './headers.js';
+import { assertWithinMessageCap, MESSAGE_CAP_LABEL } from './limits.js';
 
 /**
  * Extension -> MIME type for the attachment types agents actually send.
@@ -48,7 +48,8 @@ const FALLBACK_MIME_TYPE = 'application/octet-stream';
 export const ATTACHMENTS_PARAM_DESCRIPTION =
   'Local files to attach; the server reads each path and assembles the MIME message. ' +
   'Attachments are delivered as downloads, not inline images (no cid: references). ' +
-  `Combined size is capped at ${MIB_LABEL}.`;
+  `The complete MIME-encoded message, including headers, bodies, and attachments, is capped at ${MESSAGE_CAP_LABEL}; ` +
+  'base64 inflates attachments by about 37%, so roughly 25 MiB of files fit.';
 
 /** MIME type for a filename, by extension; octet-stream when unrecognized. */
 export function mimeTypeForExtension(filename: string): string {
@@ -70,22 +71,17 @@ export function foldBase64(base64: string): string {
   return base64.match(/.{1,76}/g)?.join('\r\n') ?? '';
 }
 
-const CAP_OPTIONS = {
-  subject: 'The combined attachment payload',
-  action: 'compose attachments',
-  deferral: 'https://github.com/simiancraft/google-mcp-suite/issues/103',
-} as const;
+/** Encoded attachment bytes, including RFC 2045 line folding. */
+function encodedSize(size: number): number {
+  const base64 = 4 * Math.ceil(size / 3);
+  return base64 + 2 * Math.max(0, Math.ceil(base64 / 76) - 1);
+}
 
 /**
- * Read attachment specs from disk into MIME-ready parts. The combined decoded
- * size is capped at the suite's shared JSON-transfer ceiling; that bounds
- * what this process buffers, not what Gmail accepts (base64 inflates the
- * encoded message ~4/3, so sends near the cap can still be refused by
- * Google; the band past the cap is deferred to issue #103). Each path is
- * stat-checked first: only regular files are read (a FIFO or device file
- * would block or grow unbounded), and an oversize total refuses before the
- * offending file is buffered. Returns undefined when there is nothing to
- * attach.
+ * Read regular files into MIME-ready parts. Check the encoded attachment total
+ * before each read and again after it, in case the file grew. This is a lower
+ * bound; the message builder checks the complete MIME bytes, including headers
+ * and bodies. Returns undefined when there is nothing to attach.
  */
 export async function loadAttachments(
   specs: AttachmentFile[] | undefined,
@@ -103,13 +99,13 @@ export async function loadAttachments(
       if (!stats.isFile()) {
         throw new Error(`Attachment path ${spec.path} is not a regular file.`);
       }
-      total += stats.size;
-      assertWithinDownloadCap(total, CAP_OPTIONS);
+      total += encodedSize(stats.size);
+      assertWithinMessageCap(total, 'The encoded attachments alone');
       bytes = await file.readFile();
       // Re-check what actually arrived: a file that grew between stat and
       // read must not slip past the ceiling the stat check enforced.
-      total += bytes.byteLength - stats.size;
-      assertWithinDownloadCap(total, CAP_OPTIONS);
+      total += encodedSize(bytes.byteLength) - encodedSize(stats.size);
+      assertWithinMessageCap(total, 'The encoded attachments alone');
     } finally {
       await file.close();
     }

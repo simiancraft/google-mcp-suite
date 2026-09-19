@@ -21,6 +21,13 @@ versus Google's full surface is mapped in [`COVERAGE.md`](./COVERAGE.md). An MCP
 discovers the live surface, with input and output JSON Schema, from the server's
 `tools/list`.
 
+Compose operations upload RFC 822 media with JSON metadata for threading.
+The complete MIME-encoded message, including headers, bodies, and attachments,
+is limited to 36,700,160 bytes (35 MiB). Attachment base64 encoding and line
+folding count toward that limit. The server rejects oversize messages locally,
+reporting both the encoded byte count and the limit. Resumable upload has the
+same size limit; see [COVERAGE.md](./COVERAGE.md).
+
 ## Layout (`src/gmail/`)
 
 ```
