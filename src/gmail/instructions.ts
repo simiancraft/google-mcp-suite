@@ -21,6 +21,8 @@ export const instructions =
   'settings updates replace the whole setting: fields left out are reset, ' +
   'so read the current value first. ' +
   'Enabling POP or IMAP opens the mailbox to other clients. ' +
+  'Sending identity updates and patches change only the primary address display name, Reply-To address, HTML signature, or default From selection; custom alias changes and SMTP relay configuration require delegated service accounts. ' +
+  'Forwarding address reads show destinations that may receive account mail without enabling forwarding; creating or removing destinations and managing delegates are unavailable under user OAuth. ' +
   'Attachment bytes are returned base64url-encoded in JSON. ' +
   'To attach files, pass the attachments parameter of create_draft, ' +
   'update_draft, or send_message: each entry names a local file path this ' +
