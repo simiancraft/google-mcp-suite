@@ -61,12 +61,19 @@ different operations and intentionally do not share a type.
 The compose operations (`create_draft`, `update_draft`, `send_message`) accept
 an optional `attachments` array (`AttachmentFile`: `path`, `filename?`,
 `mimeType?`), a suite-native input with no Google-page counterpart: the API
-takes attachments only inside the documented `raw` RFC 822 field, so the server
-reads each local path and assembles the MIME message itself (issue #101).
-Attachments are delivered as downloads, not inline images. The combined decoded
-payload is capped at the suite's shared 25 MiB transfer ceiling; that bounds
-what the server buffers, not what Gmail accepts (base64 inflation means sends
-near the cap can still be refused upstream).
+takes attachments inside RFC 822 media, so the server reads each local path
+and assembles the MIME message itself (issue #101). Attachments are delivered
+as downloads, not inline images. All compose calls upload `message/rfc822`
+media alongside JSON metadata, without outer base64url encoding. The complete
+MIME-encoded message, including headers, bodies, and attachments, is capped at
+36,700,160 bytes (35 MiB). Attachment base64 encoding and line folding count
+against this limit; decoded attachment size alone does not determine whether
+a message fits. Oversize messages fail locally with the measured size and limit.
+
+Issue #103 is addressed by media upload and encoded-size validation. Google's
+[discovery document](https://gmail.googleapis.com/$discovery/rest?version=v1)
+publishes the same maximum for simple and resumable uploads; resumable upload
+would improve interruption recovery, but would not allow larger messages.
 
 ## Deferred
 
@@ -76,5 +83,3 @@ Tracked as issues, not missing by accident:
 - **Niche / specialized** (history, S/MIME, CSE, message insert/import): issue #5.
 - **Identity and access** (send-as aliases, forwarding addresses, delegates;
   security-sensitive): issue #6.
-- **Attachments past the compose cap** (base64 inflation band, resumable
-  `/upload` endpoint): issue #103.

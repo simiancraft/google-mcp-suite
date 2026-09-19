@@ -1,3 +1,4 @@
+import { MESSAGE_CAP_LABEL } from '../../lib/limits.js';
 import { gmailOperation } from '../../operation.js';
 import { handler } from './handler.js';
 import { schema } from './schema.js';
@@ -8,7 +9,9 @@ import { schema } from './schema.js';
  * are read and assembled into the raw message (issue #101).
  */
 export const update_draft = gmailOperation({
-  description: 'Replace the content of an existing draft, optionally attaching local files.',
+  description:
+    'Replace the content of an existing draft, optionally attaching local files. ' +
+    `The complete MIME-encoded message is capped at ${MESSAGE_CAP_LABEL}.`,
   annotations: {
     readOnlyHint: false,
     destructiveHint: false,

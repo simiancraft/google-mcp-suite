@@ -1,8 +1,9 @@
+import { Readable } from 'node:stream';
 import type { gmail_v1 } from '@googleapis/gmail';
 import type { z } from 'zod';
 import { forGoogle } from '../../../lib/optionality.js';
 import { loadAttachments } from '../../lib/attachment.js';
-import { buildRawMessage, projectMessage, resolveReplyContext } from '../../lib/message.js';
+import { buildMessageBytes, projectMessage, resolveReplyContext } from '../../lib/message.js';
 import { senderAddress } from '../../lib/profile.js';
 import type { schema } from './schema.js';
 
@@ -12,7 +13,7 @@ export async function handler(
 ): Promise<z.infer<typeof schema.output>> {
   const { threadId, inReplyTo } = await resolveReplyContext(gmail, args.replyToMessageId);
 
-  const raw = buildRawMessage({
+  const bytes = buildMessageBytes({
     from: await senderAddress(gmail),
     to: args.to,
     cc: args.cc,
@@ -24,8 +25,10 @@ export async function handler(
     attachments: await loadAttachments(args.attachments),
   });
 
-  const { data } = await gmail.users.messages.send(
-    forGoogle({ userId: 'me', requestBody: forGoogle({ raw, threadId }) }),
-  );
+  const { data } = await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: forGoogle({ threadId }),
+    media: { mimeType: 'message/rfc822', body: Readable.from([bytes]) },
+  });
   return projectMessage(data);
 }
