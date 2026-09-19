@@ -184,15 +184,15 @@ The list in code is the source of truth. When you change `SCOPES`, mirror it her
 > "Google hasn't verified this app" interstitial during consent: click
 > **Advanced**, then **Go to (app) (unsafe)**, and proceed. That is expected for a
 > personal/dev app. The other cost of Testing: **refresh tokens expire 7 days after
-> issuance**, so each account needs weekly re-consent (`google-mcp-doctor auth`;
-> `doctor status` shows the countdown).
+> issuance**, so each account needs weekly re-consent (the agent runs
+> `google-mcp-doctor auth`; `doctor status` shows the countdown).
 
 ---
 
 ## Phase 5: authorize an account (per account)
 
-Build once, then run the `auth` subcommand for each account. The flow forces
-offline access and consent, so a refresh token is always written.
+Build once, then have the agent run the `auth` subcommand for each account.
+The flow forces offline access and consent, so a refresh token is always written.
 
 ```sh
 # authorize an account (opens a browser; writes ~/.google-mcp/tokens/<account>.json, 0600)
@@ -206,7 +206,9 @@ GOOGLE_MCP_ACCOUNT=<account> node ./dist/gmail/index.js auth
 - The account label becomes the token filename. Use the same label in the MCP
   registration (Phase 6).
 - On WSL2 the browser may not auto-open; the URL is printed to stderr. Copy it
-  into your browser. The callback hits `http://127.0.0.1:3000/oauth2callback`.
+  into your browser. The callback uses `http://127.0.0.1:<port>/oauth2callback`,
+  preferring port 3000 and choosing a free port if it is busy. An explicit
+  `google-mcp-doctor auth --port <n>` fails if that port is busy.
 - Verify the granted scope:
 
   ```sh

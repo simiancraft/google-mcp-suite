@@ -180,6 +180,8 @@ export async function createServer<Client>(
     try {
       return await callOperation(operations, authed, opName, args, staleCredentials);
     } catch (error) {
+      const recovery =
+        'An AI agent can run google-mcp-doctor auth to renew due accounts, or google-mcp-doctor auth <account> for this account; the person only approves browser consent. Run one account at a time, then rerun google-mcp-doctor.';
       // Only a staleCredentials-certified error reaches here: the stored
       // refresh token died, and this long-lived process never re-reads its
       // token file, so a `google-mcp-doctor auth` re-auth cannot heal it
@@ -191,7 +193,7 @@ export async function createServer<Client>(
       try {
         authed = await client(account);
       } catch (rebuildError) {
-        return errorResult(errorMessage(rebuildError));
+        return errorResult(`${errorMessage(rebuildError)} ${recovery}`);
       }
       const hints = ownLookup(operations, opName)?.annotations;
       if (hints?.readOnlyHint !== true && hints?.idempotentHint !== true) {
@@ -199,7 +201,11 @@ export async function createServer<Client>(
           `${errorMessage(error)} (stale credentials, now reloaded from disk; retry ${opName})`,
         );
       }
-      return callOperation(operations, authed, opName, args);
+      try {
+        return await callOperation(operations, authed, opName, args, staleCredentials);
+      } catch (retryError) {
+        return errorResult(`${errorMessage(retryError)} ${recovery}`);
+      }
     }
   });
 

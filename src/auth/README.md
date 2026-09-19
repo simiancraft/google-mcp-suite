@@ -44,7 +44,12 @@ All are read lazily, so a host can set them before calling:
 
 ## Authorize an account
 
-A service exposes the flow through its `auth` subcommand (it calls `runAuthFlow`):
+The agent runs `google-mcp-doctor auth <account>` itself, one account at a time.
+The command opens the person's browser and waits for the loopback callback;
+the person only approves the consent screen. Rerun `google-mcp-doctor` afterward.
+Use the same flow to recover from expired or revoked tokens (`invalid_grant`).
+
+A service also exposes the flow through its `auth` subcommand (it calls `runAuthFlow`):
 
 ```sh
 GOOGLE_MCP_ACCOUNT=you@example.com google-mcp-gmail auth
@@ -53,5 +58,12 @@ GOOGLE_MCP_ACCOUNT=you@example.com google-mcp-gmail auth
 This opens a browser consent screen and stores the token; re-run once per account.
 Adding a service's scopes later forces re-consent of every account (Google issues a
 refresh token only on a fresh grant), which is why `SCOPES` is front-loaded.
+
+The callback binds to `127.0.0.1`, preferring port 3000 and falling back to an
+OS-assigned free port if 3000 is busy. `google-mcp-doctor auth --port <n>`
+requires that specific port to be free; `--port 0` requests a free port.
+The bound port is printed before browser consent starts. This fallback assumes
+the documented Desktop OAuth client. A Web application client requires its
+redirect URIs to be registered, including the callback port.
 
 Credentials never live in the repo; `.gitignore` blocks the common filenames.
