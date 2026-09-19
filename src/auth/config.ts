@@ -99,7 +99,7 @@ export function resolveAccount(account?: string, config: Config = loadConfig()):
  */
 export const SCOPES = [
   // Gmail: mail.google.com is full access incl. permanent delete (gmail.modify
-  // cannot delete); settings.basic covers filters, forwarding, vacation, and aliases.
+  // cannot delete); settings.basic covers filters, forwarding reads, vacation, IMAP, POP, and language.
   'https://mail.google.com/',
   'https://www.googleapis.com/auth/gmail.settings.basic',
   // Drive
