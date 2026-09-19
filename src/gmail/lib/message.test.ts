@@ -41,15 +41,15 @@ describe('buildRawMessage', () => {
     expect(out).not.toContain('multipart/');
   });
 
-  it.each([
-    '',
-    '<p title="a & b">  Hello &amp; goodbye\n</p>',
-  ])('preserves supplied HTML byte-for-byte: %j', (htmlBody) => {
-    const out = decode(buildRawMessage({ from, to: ['a@b.com'], body: 'plain', htmlBody }));
-    const html = out.match(/Content-Type: text\/html.*?\r\n\r\n(.*?)\r\n\r\n--/s);
-    expect(html?.[1]).toBe(htmlBody);
-    expect(out).not.toContain('<p>plain</p>');
-  });
+  it.each(['', '<p title="a & b">  Hello &amp; goodbye\n</p>'])(
+    'preserves supplied HTML byte-for-byte: %j',
+    (htmlBody) => {
+      const out = decode(buildRawMessage({ from, to: ['a@b.com'], body: 'plain', htmlBody }));
+      const html = out.match(/Content-Type: text\/html.*?\r\n\r\n(.*?)\r\n\r\n--/s);
+      expect(html?.[1]).toBe(htmlBody);
+      expect(out).not.toContain('<p>plain</p>');
+    },
+  );
 
   it('adds an HTML alternative for an explicitly empty body', () => {
     const out = decode(buildRawMessage({ from, to: ['a@b.com'], body: '' }));
