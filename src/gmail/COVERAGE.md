@@ -22,7 +22,7 @@ with one corrected deviation: `list_drafts`' page marks all four hints false
 `search_threads`); a list cannot modify the account, so it is annotated
 read-only here.
 
-## Methods: REST reference (`methods/`, 23)
+## Methods: REST reference (`methods/`, 32)
 
 Operations beyond the MCP toolset, sourced from the REST reference.
 
@@ -32,14 +32,34 @@ Operations beyond the MCP toolset, sourced from the REST reference.
 | drafts | `get_draft`, `update_draft`, `delete_draft` ⚠️, `send_draft` ⚠️ |
 | labels | `get_label`, `update_label`, `delete_label` ⚠️ |
 | threads | `trash_thread` ⚠️, `untrash_thread`, `delete_thread` ⚠️ |
+| settings | `get_vacation`, `update_vacation` ⚠️, `get_auto_forwarding`, `get_imap`, `update_imap`, `get_pop`, `update_pop`, `get_language`, `update_language` |
 | filters | `create_filter` ⚠️, `get_filter`, `list_filters`, `delete_filter` ⚠️ |
 
 ⚠️ = destructive (`destructiveHint`): a removal (delete, trash, unlabel), a
-send, or a standing side effect like a forwarding filter; updates and additive
-modifications are not destructive (see EXTENDING.md's annotation rubric).
-Permanent deletes also require the `https://mail.google.com/` scope. The sends
-are additionally the only open-world operations (`openWorldHint`): they reach
-arbitrary external recipients.
+send, or a standing side effect like a forwarding filter or vacation responder.
+Other settings updates and additive modifications are not destructive (see
+EXTENDING.md's annotation rubric). Permanent deletes also require the
+`https://mail.google.com/` scope. Sends and `update_vacation` are open-world
+(`openWorldHint`): they can reach arbitrary external recipients.
+
+All nine account-settings methods accept the existing `gmail.settings.basic`
+scope, as listed in each method's Authorization scopes section (linked from
+CAPABILITIES.md). No scope expansion is needed. Unspecified enum sentinels are
+not exposed; unknown output enum values are dropped under the suite policy.
+The update methods are PUTs and the reference pages do not say what happens to
+omitted fields. Observed live on 2026-09-19: `update_vacation` sent with only
+`enableAutoReply` reset the stored subject and body, so the updates are
+described as full replacements. The five reads and the vacation round trip are
+live-verified; `update_imap`, `update_pop`, and `update_language` are covered
+by stub-client unit tests only.
+
+The four settings update pages specify HTTP PUT with the corresponding settings
+resource as the request body; neither those pages nor their resource pages
+specify what happens to omitted fields. Treat these calls as full replacements
+for safety: read the current settings first and send every field to keep. This
+is a conservative calling convention, not a documented claim that omitted
+fields are reset. Each operation links its update reference in CAPABILITIES.md;
+those pages link the corresponding resource definitions.
 
 ### Extension beyond the documented projection
 
@@ -68,11 +88,19 @@ payload is capped at the suite's shared 25 MiB transfer ceiling; that bounds
 what the server buffers, not what Gmail accepts (base64 inflation means sends
 near the cap can still be refused upstream).
 
+## Never offered under user OAuth
+
+These operations require delegated service accounts; the suite uses user OAuth
+and does not request their scopes.
+
+| Operation | Required scope | Google's sentence | Reference |
+|-----------|----------------|-------------------|-----------|
+| `update_auto_forwarding` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [settings.updateAutoForwarding](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings/updateAutoForwarding) |
+
 ## Deferred
 
 Tracked as issues, not missing by accident:
 
-- **Account settings** (vacation, auto-forwarding, IMAP/POP, language): issue #4.
 - **Niche / specialized** (history, S/MIME, CSE, message insert/import): issue #5.
 - **Identity and access** (send-as aliases, forwarding addresses, delegates;
   security-sensitive): issue #6.
