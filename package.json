@@ -1,6 +1,6 @@
 {
   "name": "google-mcp-suite",
-  "version": "1.21.1",
+  "version": "1.21.2",
   "type": "module",
   "description": "Google Workspace MCP servers for AI agents, one per service per account: Gmail, Google Calendar, Google Drive, Google Docs, and Google Sheets. Identity is bound to the running instance, so an agent (Claude, Cursor, or any MCP client) can never act on the wrong account; each server exposes Google's curated MCP toolset (where one exists) plus the broader REST surface.",
   "keywords": [
@@ -96,12 +96,12 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@semantic-release/changelog": "^7.0.0",
-    "@semantic-release/git": "^11.0.0",
-    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/npm": "^13.2.0",
     "@types/addressparser": "^1.0.3",
     "@types/bun": "^1.4.2",
     "conventional-changelog-conventionalcommits": "^9.3.1",
-    "fast-check": "^4.10.1",
+    "fast-check": "^4.10.2",
     "knip": "^6.37.0",
     "semantic-release": "^25.0.9",
     "typescript": "^7.0.2"
