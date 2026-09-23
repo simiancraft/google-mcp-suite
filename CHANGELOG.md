@@ -1,3 +1,5 @@
+## [1.21.2](https://github.com/simiancraft/google-mcp-suite/compare/v1.21.1...v1.21.2) (2026-09-23)
+
 ## [1.21.1](https://github.com/simiancraft/google-mcp-suite/compare/v1.21.0...v1.21.1) (2026-09-19)
 
 ## [1.21.0](https://github.com/simiancraft/google-mcp-suite/compare/v1.20.0...v1.21.0) (2026-09-17)
