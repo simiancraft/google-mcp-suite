@@ -15,7 +15,7 @@ export const service: ServiceDefinition<gmail_v1.Gmail> = {
   name: 'gmail',
   title: 'Gmail (google-mcp-suite)',
   description:
-    'Per-account Gmail MCP server: threads, messages, drafts, labels, filters, attachments, account settings, sending identities, and forwarding destinations.',
+    'Per-account Gmail MCP server: threads, messages, drafts, labels, filters, attachments, account settings, sending identities, forwarding destinations, history, S/MIME, CSE, and message import.',
   instructions,
   operations: mergeOperations(tools, methods),
   client: async (account) => gmail({ version: 'v1', auth: await authorizedClient(account) }),

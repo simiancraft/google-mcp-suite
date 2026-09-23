@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { gmail_v1 } from '@googleapis/gmail';
+import { Message } from '../entities/Message.js';
 import { buildRawMessage, projectDraft, projectMessage } from './message.js';
 
 const decode = (raw: string) => Buffer.from(raw, 'base64url').toString('utf8');
@@ -257,4 +258,16 @@ describe('projectDraft', () => {
       bccRecipients: [],
     });
   });
+});
+
+it('preserves message history checkpoints and omits null or absent IDs', () => {
+  for (const message of [
+    { id: 'M1', historyId: '123' },
+    { id: 'M1', historyId: null },
+    { id: 'M1' },
+  ]) {
+    const result = projectMessage(message);
+    expect(result.historyId).toBe(message.historyId ?? undefined);
+    expect(() => Message.parse(result)).not.toThrow();
+  }
 });

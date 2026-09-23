@@ -15,6 +15,7 @@ export async function handler(
   });
   return {
     id: data.id ?? args.threadId,
+    historyId: data.historyId ?? undefined,
     messages: (data.messages ?? []).map(projectMessage),
   };
 }

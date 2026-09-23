@@ -13,6 +13,12 @@ import { EmailAddress } from './EmailAddress.js';
  */
 export const Message = z.object({
   id: z.string().describe('The unique identifier of the message.'),
+  historyId: z
+    .string()
+    .optional()
+    .describe(
+      'The ID of the last history record modifying this message; use as startHistoryId for list_history.',
+    ),
   snippet: z.string().optional().describe('A short excerpt of the message body.'),
   subject: z.string().optional().describe('The subject, from headers.'),
   sender: EmailAddress.optional().describe('The sender (name and address), from headers.'),
