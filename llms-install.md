@@ -35,6 +35,11 @@ google-mcp-doctor auth you@example.com   # browser consent; writes the account t
 google-mcp-doctor                        # provisioned, authorized, reachable?
 ```
 
+The agent runs `google-mcp-doctor auth <account>` itself, one account at a time.
+The command opens the person's browser and waits for the loopback callback;
+the person only approves the consent screen. Rerun `google-mcp-doctor` afterward.
+Use the same flow to recover from expired or revoked tokens (`invalid_grant`).
+
 ## 3. Configure your MCP client
 
 One instance per service per account, named `<service>-<account>`:

@@ -136,6 +136,11 @@ google-mcp-doctor                # all accounts authorized and reachable?
 (Skipping the roster also works: `doctor auth you@example.com` makes the bare
 email its own label, and the instance names in step 4 then carry the email.)
 
+The agent runs `google-mcp-doctor auth <account>` itself, one account at a time.
+The command opens the person's browser and waits for the loopback callback;
+the person only approves the consent screen. Rerun `google-mcp-doctor` afterward.
+Use the same flow to recover from expired or revoked tokens (`invalid_grant`).
+
 At each consent, the browser's account chooser must pick the email that
 matches the label being authorized. The login hint preselects it, but a
 mis-click binds the wrong mailbox to the label; step 7's identity check
@@ -145,8 +150,8 @@ Gate: `doctor` ends with its `All set:` line and no `Next:` action before you
 continue; its live probes also catch APIs left un-enabled in step 2. One
 expectation to set with the human: while the OAuth app is in Testing mode,
 Google expires each refresh token 7 days after consent. `doctor status` shows
-the countdown, and a bare `google-mcp-doctor auth` re-authorizes whatever is
-due.
+the countdown, and the agent runs `google-mcp-doctor auth` to re-authorize
+whatever is due, sequentially, then reruns doctor.
 
 ### 4. Register the servers
 
@@ -404,8 +409,8 @@ Superseded: the claude.ai Gmail, Google Calendar, and Google Drive connectors
 (three deny rules in ~/.claude/settings.json).
 
 Setup and health: `google-mcp-doctor` (diagnose), `google-mcp-doctor auth
-<account>` (re-consent when a token expires). If a Google capability is
-missing, extend the suite
+<account>` (the agent runs it when a token expires; the human approves consent).
+If a Google capability is missing, extend the suite
 (https://github.com/simiancraft/google-mcp-suite/blob/main/EXTENDING.md)
 rather than falling back to a built-in connector.
 <!-- google-mcp-suite:end -->
@@ -425,8 +430,8 @@ Start a fresh session of the client, then:
    calendar, whose id is the account's email. `google-mcp-doctor` prints the
    same mapping from outside the client: its Services table shows each label
    beside the email its probes resolved. A consent mis-click in step 3
-   surfaces here as the wrong email; fix it with
-   `google-mcp-doctor auth <label>` and a more careful click.
+   surfaces here as the wrong email; the agent runs
+   `google-mcp-doctor auth <label>`, and the human selects the intended account.
 3. The superseded surfaces are gone. Claude Code: in a fresh session, no
    `claude_ai_*` Google tool is listed or callable. Codex CLI: the curated
    Google plugins expose no tools. Gemini CLI: the Workspace extension is
