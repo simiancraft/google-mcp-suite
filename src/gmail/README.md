@@ -7,12 +7,16 @@ The Gmail MCP server, and the reference (canary) implementation for the
 
 ## Capabilities
 
-42 operations across threads, messages, drafts, labels, filters, and account
+48 operations across threads, messages, drafts, labels, filters, and account
 settings: search and read (`search_threads`, `get_thread`, `get_message`, `list_messages`), compose
 and send (`create_draft`, `send_message`, `send_draft`), organize (labels,
 `batch_modify_messages`, trash/untrash), attachments (`download_attachment`),
 account filters, and settings (vacation replies, auto-forwarding reads, IMAP, POP,
-and language).
+and language), sending identities, and forwarding destinations.
+Send-as updates and patches support the primary address only; SMTP relay inputs
+and custom alias changes are unavailable under user OAuth. Forwarding destinations
+can be inspected, but not created or removed. Delegate operations require service
+accounts, including reads, and are not offered.
 Auto-forwarding updates require delegated service accounts and are not offered.
 Every operation carries the four MCP annotation hints;
 removals, sends, standing filters, and `update_vacation` ⚠️ are marked destructive
