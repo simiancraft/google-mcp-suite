@@ -7,19 +7,37 @@ The Gmail MCP server, and the reference (canary) implementation for the
 
 ## Capabilities
 
-48 operations across threads, messages, drafts, labels, filters, and account
+68 operations across threads, messages, drafts, labels, filters, and account
 settings: search and read (`search_threads`, `get_thread`, `get_message`, `list_messages`), compose
 and send (`create_draft`, `send_message`, `send_draft`), organize (labels,
 `batch_modify_messages`, trash/untrash), attachments (`download_attachment`),
 account filters, and settings (vacation replies, auto-forwarding reads, IMAP, POP,
-and language), sending identities, and forwarding destinations.
+and language), sending identities, forwarding destinations, mailbox history,
+S/MIME certificates, CSE identities and keypairs, and RFC 822 message insert/import.
 Send-as updates and patches support the primary address only; SMTP relay inputs
 and custom alias changes are unavailable under user OAuth. Forwarding destinations
 can be inspected, but not created or removed. Delegate operations require service
 accounts, including reads, and are not offered.
 Auto-forwarding updates require delegated service accounts and are not offered.
+History reads accept a saved checkpoint and return one page of changes; expired
+checkpoints require a full resync. Use `get_profile` for a fresh historyId or
+the optional historyId returned with a message or thread. Insert and import store base64url RFC 822
+messages through JSON without sending them; the decoded ceiling is 25 MiB, and
+Gmail can reject smaller payloads. Import can add calendar meetings; `deleted`
+stores the new message only in Workspace Vault.
+
+S/MIME writes support the primary address only, with hosted S/MIME enabled by an
+administrator. Supported editions are Frontline Plus, Enterprise Plus, Education
+Fundamentals, Education Standard, and Education Plus. Private keys and passwords
+are never returned. CSE requires Frontline Plus, Enterprise Plus, Education
+Standard, or Education Plus, admin-enabled CSE and hardware key encryption, and
+the Assured Controls or Assured Controls Plus add-on. Key metadata can contain
+sensitive opaque service data. Disabling a key blocks decryption and signing;
+obliteration after more than 30 disabled days cannot be undone. Prerequisite
+sources and the per-method OAuth audit are in [COVERAGE.md](./COVERAGE.md).
+
 Every operation carries the four MCP annotation hints;
-removals, sends, standing filters, and `update_vacation` ⚠️ are marked destructive
+removals, CSE key disabling, sends, standing filters, and `update_vacation` ⚠️ are marked destructive
 (`destructiveHint`); sends and `update_vacation` are open-world.
 
 The full, always-current list is [`CAPABILITIES.md`](./CAPABILITIES.md),
