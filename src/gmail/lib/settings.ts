@@ -1,9 +1,12 @@
 import type { gmail_v1 } from '@googleapis/gmail';
 import { narrow } from '../../lib/utils/narrow.js';
 import { AutoForwarding } from '../entities/AutoForwarding.js';
+import { ForwardingAddress } from '../entities/ForwardingAddress.js';
 import { ImapSettings } from '../entities/ImapSettings.js';
 import type { LanguageSettings } from '../entities/LanguageSettings.js';
 import { PopSettings } from '../entities/PopSettings.js';
+import { SendAs } from '../entities/SendAs.js';
+import { SmtpMsa } from '../entities/SmtpMsa.js';
 import type { VacationSettings } from '../entities/VacationSettings.js';
 
 /** Project raw Gmail vacation settings, dropping nulls. */
@@ -54,5 +57,45 @@ export function projectPopSettings(data: gmail_v1.Schema$PopSettings): PopSettin
 export function projectLanguageSettings(data: gmail_v1.Schema$LanguageSettings): LanguageSettings {
   return {
     displayLanguage: data.displayLanguage ?? undefined,
+  };
+}
+
+/** Project send-as settings, dropping nulls, unknown enums, and write-only credentials. */
+export function projectSendAs(data: gmail_v1.Schema$SendAs): SendAs {
+  return {
+    sendAsEmail: data.sendAsEmail ?? undefined,
+    displayName: data.displayName ?? undefined,
+    replyToAddress: data.replyToAddress ?? undefined,
+    signature: data.signature ?? undefined,
+    isPrimary: data.isPrimary ?? undefined,
+    isDefault: data.isDefault ?? undefined,
+    treatAsAlias: data.treatAsAlias ?? undefined,
+    smtpMsa: data.smtpMsa
+      ? {
+          host: data.smtpMsa.host ?? undefined,
+          port: data.smtpMsa.port ?? undefined,
+          securityMode: narrow(
+            data.smtpMsa.securityMode,
+            SmtpMsa.shape.securityMode.unwrap().options,
+          ),
+        }
+      : undefined,
+    verificationStatus: narrow(
+      data.verificationStatus,
+      SendAs.shape.verificationStatus.unwrap().options,
+    ),
+  };
+}
+
+/** Project forwarding settings, dropping nulls and unknown enums. */
+export function projectForwardingAddress(
+  data: gmail_v1.Schema$ForwardingAddress,
+): ForwardingAddress {
+  return {
+    forwardingEmail: data.forwardingEmail ?? undefined,
+    verificationStatus: narrow(
+      data.verificationStatus,
+      ForwardingAddress.shape.verificationStatus.unwrap().options,
+    ),
   };
 }

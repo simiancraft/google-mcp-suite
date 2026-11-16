@@ -12,14 +12,19 @@ import { download_attachment } from './download_attachment/index.js';
 import { get_auto_forwarding } from './get_auto_forwarding/index.js';
 import { get_draft } from './get_draft/index.js';
 import { get_filter } from './get_filter/index.js';
+import { get_forwarding_address } from './get_forwarding_address/index.js';
 import { get_imap } from './get_imap/index.js';
 import { get_label } from './get_label/index.js';
 import { get_language } from './get_language/index.js';
 import { get_message } from './get_message/index.js';
 import { get_pop } from './get_pop/index.js';
+import { get_send_as } from './get_send_as/index.js';
 import { get_vacation } from './get_vacation/index.js';
 import { list_filters } from './list_filters/index.js';
+import { list_forwarding_addresses } from './list_forwarding_addresses/index.js';
 import { list_messages } from './list_messages/index.js';
+import { list_send_as } from './list_send_as/index.js';
+import { patch_send_as } from './patch_send_as/index.js';
 import { send_draft } from './send_draft/index.js';
 import { send_message } from './send_message/index.js';
 import { trash_message } from './trash_message/index.js';
@@ -31,6 +36,7 @@ import { update_imap } from './update_imap/index.js';
 import { update_label } from './update_label/index.js';
 import { update_language } from './update_language/index.js';
 import { update_pop } from './update_pop/index.js';
+import { update_send_as } from './update_send_as/index.js';
 import { update_vacation } from './update_vacation/index.js';
 
 /**
@@ -69,6 +75,13 @@ export const methods = {
   get_filter,
   list_filters,
   delete_filter,
+  // identity and forwarding destinations
+  get_send_as,
+  list_send_as,
+  update_send_as,
+  patch_send_as,
+  get_forwarding_address,
+  list_forwarding_addresses,
   // account settings
   get_vacation,
   update_vacation,

@@ -14,7 +14,7 @@
 
 <p align="center">
   <strong>Google Workspace MCP servers you can read in an afternoon, one per service.</strong><br />
-  The curated <a href="https://modelcontextprotocol.io/">MCP</a> toolset plus the broader REST surface for Gmail, Google Calendar, Google Drive, Google Docs, and Google Sheets, one server per service per account: <strong>219 self-describing operations</strong> across five Google services, so an AI agent (Claude, Cursor, or any MCP client) can do (nearly) anything your accounts can, on several accounts at once, and never on the wrong one. Every operation cites its Google reference page and validates input and output; test coverage is pinned at 100%.
+  The curated <a href="https://modelcontextprotocol.io/">MCP</a> toolset plus the broader REST surface for Gmail, Google Calendar, Google Drive, Google Docs, and Google Sheets, one server per service per account: <strong>225 self-describing operations</strong> across five Google services, so an AI agent (Claude, Cursor, or any MCP client) can do (nearly) anything your accounts can, on several accounts at once, and never on the wrong one. Every operation cites its Google reference page and validates input and output; test coverage is pinned at 100%.
 </p>
 
 <p align="center">
@@ -30,7 +30,7 @@
 </p>
 
 <p align="center">
-  <sub><strong>219 operations</strong> ship today: <strong>Gmail</strong> (<a href="./src/gmail/CAPABILITIES.md">42</a>), <strong>Calendar</strong> (<a href="./src/calendar/CAPABILITIES.md">31</a>), <strong>Sheets</strong> (<a href="./src/sheets/CAPABILITIES.md">76</a>), <strong>Docs</strong> (<a href="./src/docs/CAPABILITIES.md">35</a>), and <strong>Drive</strong> (<a href="./src/drive/CAPABILITIES.md">35</a>).</sub>
+  <sub><strong>225 operations</strong> ship today: <strong>Gmail</strong> (<a href="./src/gmail/CAPABILITIES.md">48</a>), <strong>Calendar</strong> (<a href="./src/calendar/CAPABILITIES.md">31</a>), <strong>Sheets</strong> (<a href="./src/sheets/CAPABILITIES.md">76</a>), <strong>Docs</strong> (<a href="./src/docs/CAPABILITIES.md">35</a>), and <strong>Drive</strong> (<a href="./src/drive/CAPABILITIES.md">35</a>).</sub>
 </p>
 
 <p align="center"><sub><strong>Replacing a built-in connector?</strong> Hand your agent <a href="./ADOPTING.md">ADOPTING.md</a>: the playbook to adopt, supersede, verify, and decommission.</sub></p>
@@ -46,7 +46,7 @@ The design has two internal concepts and nothing else:
 
 That is the whole surface. Read one operation folder and you understand all of them.
 
-- **REST plus MCP in one surface.** Each server exposes the curated MCP toolset *and* the broader REST method set of its Google API, so an agent gets far more than a thin slice. Gmail ships with [42 operations](./src/gmail/CAPABILITIES.md) (10 curated MCP tools plus 32 REST methods), Calendar with [31](./src/calendar/CAPABILITIES.md) (8 plus 23), Drive with [35](./src/drive/CAPABILITIES.md) (8 plus 27), Sheets with [76](./src/sheets/CAPABILITIES.md), and Docs with [35](./src/docs/CAPABILITIES.md) (Sheets and Docs are REST-sourced throughout; Google published no MCP toolset for either when they shipped, though previews now exist); the split is explained in [MCP, and then some](#mcp-and-then-some).
+- **REST plus MCP in one surface.** Each server exposes the curated MCP toolset *and* the broader REST method set of its Google API, so an agent gets far more than a thin slice. Gmail ships with [48 operations](./src/gmail/CAPABILITIES.md) (10 curated MCP tools plus 38 REST methods), Calendar with [31](./src/calendar/CAPABILITIES.md) (8 plus 23), Drive with [35](./src/drive/CAPABILITIES.md) (8 plus 27), Sheets with [76](./src/sheets/CAPABILITIES.md), and Docs with [35](./src/docs/CAPABILITIES.md) (Sheets and Docs are REST-sourced throughout; Google published no MCP toolset for either when they shipped, though previews now exist); the split is explained in [MCP, and then some](#mcp-and-then-some).
 - **The folder tree mirrors Google's docs.** A Google tools-list reference page becomes a `tools/` folder; a Google REST method reference page becomes a `methods/` folder. If you can find the operation in Google's docs, you can find it in this repo.
 
 | Google's reference page | This repo's folder |
@@ -216,7 +216,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full task list, [AGENTS.md](./A
 
 | Service | Status | Operations |
 |---|---|---|
-| **Gmail** | ✅ Implemented | [42 operations](./src/gmail/CAPABILITIES.md): threads, messages, drafts, labels, filters, attachments, and account settings |
+| **Gmail** | ✅ Implemented | [48 operations](./src/gmail/CAPABILITIES.md): threads, messages, drafts, labels, filters, attachments, account settings, sending identities, and forwarding destinations |
 | **Calendar** | ✅ Implemented | [31 operations](./src/calendar/CAPABILITIES.md): events, calendars, sharing, free/busy, meeting-time suggestions |
 | **Sheets** | ✅ Implemented | [76 operations](./src/sheets/CAPABILITIES.md): spreadsheets, values, batch and data-filter reads/writes, developer metadata, sheet management, dimension layout and groups, named ranges, formatting, banding and borders, cell content and merges, sorting, filters, data transformations, conditional format rules, data validation, protected ranges, every ordinary-grid chart family, slicers, and embedded-object layout |
 | **Docs** | ✅ Implemented | [35 operations](./src/docs/CAPABILITIES.md): document reads and creation, curated text editing and styling, document and section layout, tables, named ranges, headers and footers, page breaks, footnotes, and images |

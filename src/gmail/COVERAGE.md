@@ -22,7 +22,7 @@ with one corrected deviation: `list_drafts`' page marks all four hints false
 `search_threads`); a list cannot modify the account, so it is annotated
 read-only here.
 
-## Methods: REST reference (`methods/`, 32)
+## Methods: REST reference (`methods/`, 38)
 
 Operations beyond the MCP toolset, sourced from the REST reference.
 
@@ -33,6 +33,8 @@ Operations beyond the MCP toolset, sourced from the REST reference.
 | labels | `get_label`, `update_label`, `delete_label` ⚠️ |
 | threads | `trash_thread` ⚠️, `untrash_thread`, `delete_thread` ⚠️ |
 | settings | `get_vacation`, `update_vacation` ⚠️, `get_auto_forwarding`, `get_imap`, `update_imap`, `get_pop`, `update_pop`, `get_language`, `update_language` |
+| sendAs | `get_send_as`, `list_send_as`, `update_send_as`, `patch_send_as` |
+| forwardingAddresses | `get_forwarding_address`, `list_forwarding_addresses` |
 | filters | `create_filter` ⚠️, `get_filter`, `list_filters`, `delete_filter` ⚠️ |
 
 ⚠️ = destructive (`destructiveHint`): a removal (delete, trash, unlabel), a
@@ -60,6 +62,33 @@ for safety: read the current settings first and send every field to keep. This
 is a conservative calling convention, not a documented claim that omitted
 fields are reset. Each operation links its update reference in CAPABILITIES.md;
 those pages link the corresponding resource definitions.
+
+The six identity and access methods (issue #6) accept the existing
+`gmail.settings.basic` scope; no scopes were added. Send-as reads include the
+primary address and custom aliases. User-OAuth updates support only the primary
+address: `displayName`, `replyToAddress`, HTML `signature`, and `isDefault` (only
+`true` is writable). `sendAsEmail`, `isPrimary`, and `verificationStatus` are
+read-only on updates; `smtpMsa` and `treatAsAlias` apply only to custom aliases
+and are excluded from inputs. The output SMTP projection omits both write-only
+credentials, `username` and `password`. Unknown output enums are dropped, and
+unspecified enum sentinels are not exposed.
+
+The [update reference](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.sendAs/update)
+uses PUT and limits non-primary updates to delegated service accounts. The
+[patch reference](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.sendAs/patch)
+uses PATCH but does not repeat that restriction; the suite applies the same
+primary-only input policy to both. Treat PUT as full replacement of writable
+settings: read first and send every writable field to keep. The page does not
+specify omitted-field behavior, so this is a conservative calling convention;
+PATCH is the partial-change operation. Administrator policy can silently prevent
+primary display-name changes. Signatures apply to new mail composed in the Gmail
+web UI, not messages assembled by this server.
+
+Forwarding reads expose destinations and verification without enabling mail
+forwarding or sending email. All six methods have stub-client tests and were run
+live on 2026-09-19 against a primary address, the writes with unchanged values.
+No custom alias was available, so the refusal of a non-primary update under
+user OAuth is documented by Google and not observed here.
 
 ### Extension beyond the documented projection
 
@@ -90,19 +119,35 @@ near the cap can still be refused upstream).
 
 ## Never offered under user OAuth
 
-These operations require delegated service accounts; the suite uses user OAuth
-and does not request their scopes.
+These existing operations require delegated service accounts; the suite uses user
+OAuth and does not request `gmail.settings.sharing`. Delegate reads list accepted
+user scopes but still explicitly require service account clients in their
+descriptions. The table lists every accepted scope, not just the sharing scope.
 
 | Operation | Required scope | Google's sentence | Reference |
 |-----------|----------------|-------------------|-----------|
 | `update_auto_forwarding` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [settings.updateAutoForwarding](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings/updateAutoForwarding) |
+| `sendAs.create` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [sendAs.create](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.sendAs/create) |
+| `sendAs.delete` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [sendAs.delete](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.sendAs/delete) |
+| `sendAs.verify` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [sendAs.verify](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.sendAs/verify) |
+| `forwardingAddresses.create` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [forwardingAddresses.create](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.forwardingAddresses/create) |
+| `forwardingAddresses.delete` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [forwardingAddresses.delete](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.forwardingAddresses/delete) |
+| `delegates.create` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [delegates.create](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.delegates/create) |
+| `delegates.get` | `https://www.googleapis.com/auth/gmail.settings.basic`, `https://mail.google.com/`, `https://www.googleapis.com/auth/gmail.modify`, or `https://www.googleapis.com/auth/gmail.readonly` | "This method is only available to service account clients that have been delegated domain-wide authority." | [delegates.get](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.delegates/get) |
+| `delegates.list` | `https://www.googleapis.com/auth/gmail.settings.basic`, `https://mail.google.com/`, `https://www.googleapis.com/auth/gmail.modify`, or `https://www.googleapis.com/auth/gmail.readonly` | "This method is only available to service account clients that have been delegated domain-wide authority." | [delegates.list](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.delegates/list) |
+| `delegates.delete` | `https://www.googleapis.com/auth/gmail.settings.sharing` | "This method is only available to service account clients that have been delegated domain-wide authority." | [delegates.delete](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.delegates/delete) |
+| `forwardingAddresses.verify` | None; no REST method exists | No method description exists; the resource lists only create, delete, get, and list. | [forwardingAddresses](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.settings.forwardingAddresses) |
+
+`sendAs.verify` would send email to the alias owner and require destructive,
+non-idempotent, and open-world annotations; `sendAs.delete` would be destructive.
+Neither is shipped because both require delegated service accounts. The issue's
+`forwardingAddresses.verify` candidate has no REST reference page (404), and the
+resource's Methods section has no verify entry.
 
 ## Deferred
 
 Tracked as issues, not missing by accident:
 
 - **Niche / specialized** (history, S/MIME, CSE, message insert/import): issue #5.
-- **Identity and access** (send-as aliases, forwarding addresses, delegates;
-  security-sensitive): issue #6.
 - **Attachments past the compose cap** (base64 inflation band, resumable
   `/upload` endpoint): issue #103.
