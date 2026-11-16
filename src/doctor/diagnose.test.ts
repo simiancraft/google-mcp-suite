@@ -129,6 +129,9 @@ describe('diagnose', () => {
     expect(out).toContain('· planned  planned');
     expect(out).toContain('noprobe  implemented');
     expect(out).toContain('Next: authorize 1 account');
+    expect(out).toContain(
+      "If you are an AI agent, run the auth command yourself; it opens the person's browser and waits for the callback, and the person only approves the consent screen. Run one account at a time, then rerun google-mcp-doctor.",
+    );
     log.mockRestore();
   });
 

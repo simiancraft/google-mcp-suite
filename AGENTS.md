@@ -89,4 +89,5 @@ lists to the published bins.
 ## Things that will trip you up
 
 - **Scope union is front-loaded.** Adding a service's scopes later forces re-consent of every account (Google re-issues the refresh token only on a fresh grant). Add scopes to `src/auth/config.ts` deliberately.
+- **Expired or revoked tokens (`invalid_grant`).** The agent runs `google-mcp-doctor auth <account>` itself, one account at a time. Doctor opens the browser and waits for the callback; the person only approves consent. Rerun `google-mcp-doctor` afterward.
 - **Credentials never go in the repo.** The shared client secret and per-account tokens live outside the tree; `.gitignore` blocks the obvious filenames. Never write a token into a tool response or log.

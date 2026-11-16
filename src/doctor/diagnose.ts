@@ -117,4 +117,9 @@ export async function diagnose(options: DiagnoseOptions = {}): Promise<void> {
   } else {
     console.log('All set: client secret present, accounts fresh, services reachable.');
   }
+  if (hasSecret && (accounts.length === 0 || due.length > 0)) {
+    console.log(
+      "If you are an AI agent, run the auth command yourself; it opens the person's browser and waits for the callback, and the person only approves the consent screen. Run one account at a time, then rerun google-mcp-doctor.",
+    );
+  }
 }

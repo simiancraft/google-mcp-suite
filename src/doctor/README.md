@@ -4,6 +4,13 @@ Provisioning and auth-health micro-CLI for google-mcp-suite. It answers "is this
 install provisioned, authorized, and reachable?" and tells an agent or human the
 exact next step. Ships as the `google-mcp-doctor` bin.
 
+## Agents run this
+
+The agent runs `google-mcp-doctor auth <account>` itself, one account at a time.
+The command opens the person's browser and waits for the loopback callback;
+the person only approves the consent screen. Rerun `google-mcp-doctor` afterward.
+Use the same flow to recover from expired or revoked tokens (`invalid_grant`).
+
 ## Why it is a peer, not part of a service
 
 Doctor is a **peer** of the services. The dependency direction is one-way and
@@ -33,6 +40,13 @@ against silent drift.
 
 `--no-probe` skips the live service health checks (offline/fast). Dev aliases:
 `bun run doctor`, `bun run tokens`, `bun run reauth`.
+
+The callback binds to `127.0.0.1`, preferring port 3000 and falling back to an
+OS-assigned free port if 3000 is busy. `google-mcp-doctor auth --port <n>`
+requires that specific port to be free; `--port 0` requests a free port.
+The bound port is printed before browser consent starts. This fallback assumes
+the documented Desktop OAuth client. A Web application client requires its
+redirect URIs to be registered, including the callback port.
 
 ## The onboarding flow it drives
 

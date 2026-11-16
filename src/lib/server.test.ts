@@ -349,6 +349,9 @@ describe('stale-credential healing', () => {
     const res = await mcp.callTool({ name: 'echo', arguments: { text: 'hi' } });
     expect(res.isError).toBe(true);
     expect((res.content as [{ text: string }])[0].text).toContain('invalid_grant');
+    expect((res.content as [{ text: string }])[0].text).toContain(
+      'An AI agent can run google-mcp-doctor auth',
+    );
     expect(factory).toHaveBeenCalledTimes(2);
 
     await mcp.close();

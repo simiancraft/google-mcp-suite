@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { runAuth, selectTargets } from './auth.js';
@@ -77,7 +79,9 @@ describe('runAuth', () => {
 
   it('authorizes each target, prefilling login hint for emails only', async () => {
     const authorize = mock(
-      async (_a?: string, _o?: { openBrowser?: (u: string) => unknown; loginHint?: string }) => {},
+      async (_a?: string, _o?: { openBrowser?: (u: string) => unknown; loginHint?: string }) => {
+        _o?.openBrowser?.('https://example.com');
+      },
     );
     const openBrowser = (): void => {};
     const log = spyOn(console, 'log').mockImplementation(() => {});
@@ -86,7 +90,45 @@ describe('runAuth', () => {
     expect(authorize.mock.calls[0]?.[1]?.loginHint).toBe('x@y.com');
     expect(authorize.mock.calls[1]?.[0]).toBe('plain');
     expect(authorize.mock.calls[1]?.[1]?.loginHint).toBeUndefined();
+    expect(log).toHaveBeenCalledWith(
+      'Browser opened for x@y.com (x@y.com); waiting for consent approval. This command times out after 300 seconds.',
+    );
+    expect(log).toHaveBeenCalledWith(
+      'Browser opened for plain; waiting for consent approval. This command times out after 300 seconds.',
+    );
     expect(log).toHaveBeenCalledWith(expect.stringContaining('Done.'));
     log.mockRestore();
+  });
+  it('passes --port separately from account selection, including --all', async () => {
+    writeRoster([{ label: 'plain' }]);
+    const authorize = mock(async (_a?: string, _o?: { port?: number }) => {});
+    await runAuth(['--all', '--port', '0'], { authorize });
+    expect(authorize.mock.calls).toHaveLength(1);
+    expect(authorize.mock.calls[0]?.[0]).toBe('plain');
+    expect(authorize.mock.calls[0]?.[1]?.port).toBe(0);
+  });
+
+  it('rejects invalid or missing ports before starting auth', async () => {
+    const authorize = mock(async () => {});
+    for (const raw of ['abc', '-1', '1.5', '65536', '', ' ']) {
+      await expect(runAuth(['plain', '--port', raw], { authorize })).rejects.toThrow('--port');
+    }
+    await expect(runAuth(['plain', '--port'], { authorize })).rejects.toThrow();
+    expect(authorize).not.toHaveBeenCalled();
+  });
+
+  it('fails clearly when an explicit --port is occupied', async () => {
+    const blocker = createServer();
+    await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', resolve));
+    const port = (blocker.address() as AddressInfo).port;
+    const openBrowser = mock(() => {});
+    try {
+      await expect(runAuth(['plain', '--port', String(port)], { openBrowser })).rejects.toThrow(
+        `Callback port ${port} is already in use; choose another --port.`,
+      );
+      expect(openBrowser).not.toHaveBeenCalled();
+    } finally {
+      blocker.close();
+    }
   });
 });

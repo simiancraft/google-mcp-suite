@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:http';
-import { connect } from 'node:net';
+import { createServer, Server } from 'node:http';
+import { type AddressInfo, connect } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { OAuth2Client } from 'google-auth-library';
@@ -234,6 +234,79 @@ describe('runAuthFlow', () => {
       (e) => e,
     );
     expect((await rejection)?.message).toMatch(/timed out/);
+    const probe = createServer();
+    await new Promise<void>((resolve) => probe.listen(31737, '127.0.0.1', resolve));
+    probe.close();
+  });
+
+  it('falls back from an occupied preferred port and uses the bound port in the redirect URI', async () => {
+    const blocker = createServer();
+    await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', resolve));
+    const occupiedPort = (blocker.address() as AddressInfo).port;
+    // Exercise a real bind failure without depending on whether a dev server owns 3000.
+    const listen = Server.prototype.listen;
+    const binding = spyOn(Server.prototype, 'listen').mockImplementation(function (
+      this: Server,
+      ...args: unknown[]
+    ) {
+      if (args[0] === 3000) args[0] = occupiedPort;
+      return Reflect.apply(listen, this, args);
+    });
+    try {
+      const { url, openBrowser } = captureAuthUrl();
+      const flow = runAuthFlow('acct', { openBrowser });
+      const rejection = flow.catch((error: Error) => error);
+      const authUrl = new URL(await url);
+      const redirect = new URL(authUrl.searchParams.get('redirect_uri') ?? '');
+      expect(redirect.hostname).toBe('127.0.0.1');
+      expect(redirect.pathname).toBe('/oauth2callback');
+      expect(Number(redirect.port)).toBeGreaterThan(0);
+      expect(Number(redirect.port)).not.toBe(occupiedPort);
+      expect(errSpy).toHaveBeenCalledWith(
+        `OAuth callback listening on 127.0.0.1:${redirect.port}.`,
+      );
+      expect(await hitCallback(Number(redirect.port), '?state=wrong')).toBe(403);
+      expect(await rejection).toBeInstanceOf(Error);
+    } finally {
+      binding.mockRestore();
+      blocker.close();
+    }
+  });
+
+  it('surfaces other listen errors without opening a browser', async () => {
+    const spy = spyOn(Server.prototype, 'listen').mockImplementation(function (this: Server) {
+      queueMicrotask(() =>
+        this.emit('error', Object.assign(new Error('listen denied'), { code: 'EACCES' })),
+      );
+      return this;
+    });
+    try {
+      await expect(
+        runAuthFlow('acct', {
+          openBrowser: () => {
+            throw new Error('browser must not open');
+          },
+        }),
+      ).rejects.toThrow('listen denied');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('closes the bound server when opening the browser fails', async () => {
+    let port = 0;
+    await expect(
+      runAuthFlow('acct', {
+        port: 0,
+        openBrowser: async (url) => {
+          port = Number(new URL(new URL(url).searchParams.get('redirect_uri') ?? '').port);
+          throw new Error('browser failed');
+        },
+      }),
+    ).rejects.toThrow('browser failed');
+    const probe = createServer();
+    await new Promise<void>((resolve) => probe.listen(port, '127.0.0.1', resolve));
+    probe.close();
   });
 
   it('rejects when the token exchange fails', async () => {

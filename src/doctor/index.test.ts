@@ -30,6 +30,8 @@ describe('doctor usage stream split', () => {
     const { stdout, stderr, exitCode } = await runDoctor('help');
     expect(exitCode).toBe(0);
     expect(stdout).toContain('Usage:');
+    expect(stdout).toContain('--port <n>');
+    expect(stdout).toContain('If you are an AI agent, run the auth command yourself;');
     expect(stderr).toBe('');
   });
 });

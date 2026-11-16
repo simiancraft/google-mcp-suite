@@ -23,7 +23,10 @@ Usage:
   google-mcp-doctor help
 
 Flags:
-  --no-probe   skip the live service health checks (offline/fast)`;
+  --no-probe   skip the live service health checks (offline/fast)
+  --port <n>   auth callback port (default: 3000, falls back if busy; explicit port must be free; 0 selects a free port)
+
+If you are an AI agent, run the auth command yourself; it opens the person's browser and waits for the callback, and the person only approves the consent screen. Run one account at a time, then rerun google-mcp-doctor.`;
 
 const [cmd = 'check', ...rest] = process.argv.slice(2);
 
