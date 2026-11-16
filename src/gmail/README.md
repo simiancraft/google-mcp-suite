@@ -7,13 +7,16 @@ The Gmail MCP server, and the reference (canary) implementation for the
 
 ## Capabilities
 
-33 operations across threads, messages, drafts, labels, and filters: search and
-read (`search_threads`, `get_thread`, `get_message`, `list_messages`), compose
+42 operations across threads, messages, drafts, labels, filters, and account
+settings: search and read (`search_threads`, `get_thread`, `get_message`, `list_messages`), compose
 and send (`create_draft`, `send_message`, `send_draft`), organize (labels,
-`batch_modify_messages`, trash/untrash), attachments (`download_attachment`), and
-account filters. Every operation carries the four MCP annotation hints;
-removals, sends, and standing filters are marked destructive
-(`destructiveHint`), and the sends are open-world.
+`batch_modify_messages`, trash/untrash), attachments (`download_attachment`),
+account filters, and settings (vacation replies, auto-forwarding reads, IMAP, POP,
+and language).
+Auto-forwarding updates require delegated service accounts and are not offered.
+Every operation carries the four MCP annotation hints;
+removals, sends, standing filters, and `update_vacation` ⚠️ are marked destructive
+(`destructiveHint`); sends and `update_vacation` are open-world.
 
 The full, always-current list is [`CAPABILITIES.md`](./CAPABILITIES.md),
 regenerated from the registries with `bun run capabilities`; what is implemented

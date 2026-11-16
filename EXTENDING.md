@@ -148,13 +148,17 @@ pages establish:
 - creates → all false (additive, and repeating duplicates)
 - updates and additive modifications (label, subscribe, untrash, patch) →
   destructive **false**, idempotent true (Google's `update_event` precedent:
-  overwriting fields is not "destructive" in MCP's vocabulary)
+  overwriting fields is not "destructive" in MCP's vocabulary); updates that
+  install standing side effects follow the exception below
 - removals (delete, clear, trash, unlabel, unsubscribe) → destructive
   **true**, idempotent true (Google's `unlabel_message` precedent; reversible
   removals still count)
-- sends → destructive true, idempotent false, and open-world true (the
-  rubric's one cluster that reaches arbitrary external parties); a standing
-  side effect (`create_filter`) is destructive and not idempotent
+- sends → destructive true, idempotent false, and open-world true because they
+  reach arbitrary external parties
+- standing side effects → destructive true; `create_filter` is not idempotent
+  because repeating creates another rule, while `update_vacation` is idempotent
+  because repeating sets the same responder configuration; `update_vacation`
+  is also open-world because the enabled responder emails incoming senders
 
 Everything else under the rubric is closed-world (`openWorldHint: false`).
 Toolset transcriptions keep their page's hints verbatim either way; Drive's
