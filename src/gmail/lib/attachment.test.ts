@@ -2,13 +2,14 @@ import { describe, expect, it } from 'bun:test';
 import { mkdir, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { MAX_DOWNLOAD_BYTES, MIB_LABEL } from '../../lib/limits.js';
 import {
   ATTACHMENTS_PARAM_DESCRIPTION,
   foldBase64,
   loadAttachments,
   mimeTypeForExtension,
 } from './attachment.js';
+import { MESSAGE_CAP_LABEL } from './limits.js';
+import { buildMessageBytes } from './message.js';
 
 async function tempDir(): Promise<string> {
   const dir = join(tmpdir(), `attach-${process.pid}-${Math.random().toString(36).slice(2)}`);
@@ -102,15 +103,17 @@ describe('loadAttachments', () => {
     });
   });
 
-  it('refuses a combined payload over the suite ceiling, citing the deferral issue', async () => {
+  it('refuses combined encoded attachments over the Gmail message limit', async () => {
     const dir = await tempDir();
     const big = join(dir, 'big.bin');
     const small = join(dir, 'small.bin');
-    await writeFile(big, Buffer.alloc(MAX_DOWNLOAD_BYTES));
-    await writeFile(small, Buffer.alloc(1));
+    await writeFile(big, Buffer.alloc(13 * 1024 * 1024));
+    await writeFile(small, Buffer.alloc(13 * 1024 * 1024));
 
     // Each file fits alone; together they cross the ceiling.
-    await expect(loadAttachments([{ path: big }, { path: small }])).rejects.toThrow(/issues\/103/);
+    await expect(loadAttachments([{ path: big }, { path: small }])).rejects.toThrow(
+      /encoded attachments alone.*36700160 bytes/,
+    );
   });
 
   it('refuses an oversize file on its stat size, before buffering it', async () => {
@@ -121,7 +124,7 @@ describe('loadAttachments', () => {
     // check were missing, readFile would try to buffer 8 GiB here.
     await truncate(path, 8 * 1024 * 1024 * 1024);
 
-    await expect(loadAttachments([{ path }])).rejects.toThrow(/caps/);
+    await expect(loadAttachments([{ path }])).rejects.toThrow(/message limit/);
   });
 
   it('refuses a path that is not a regular file', async () => {
@@ -137,6 +140,16 @@ describe('loadAttachments', () => {
 
 describe('ATTACHMENTS_PARAM_DESCRIPTION', () => {
   it('states the cap with the shared label, derived from the constant', () => {
-    expect(ATTACHMENTS_PARAM_DESCRIPTION).toContain(MIB_LABEL);
+    expect(ATTACHMENTS_PARAM_DESCRIPTION).toContain(MESSAGE_CAP_LABEL);
   });
+});
+
+it('uploads an attachment above the former decoded cap when the MIME message fits', async () => {
+  const dir = await tempDir();
+  const path = join(dir, 'large.bin');
+  await writeFile(path, Buffer.alloc(25 * 1024 * 1024 + 1));
+  const attachments = await loadAttachments([{ path }]);
+  const bytes = buildMessageBytes({ from: 'me@example.com', to: ['a@b.com'], attachments });
+  expect(bytes.byteLength).toBeLessThan(35 * 1024 * 1024);
+  expect(bytes.toString()).toContain('Content-Disposition: attachment; filename="large.bin"');
 });

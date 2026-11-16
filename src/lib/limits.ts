@@ -2,8 +2,7 @@
  * The decoded-size ceiling for base64-in-JSON content transfers: 25 MiB,
  * Gmail's attachment maximum and the suite's de facto boundary for bytes that
  * must buffer whole into a JSON string. Drive's blob paths, Gmail's
- * attachment download, and Gmail's compose attachments (outbound bytes buffer
- * whole into the raw message the same way) enforce it via
+ * attachment download enforce it via
  * `assertWithinDownloadCap`; Drive's Google-native export paths are exempt,
  * bounded instead by Google's own export cap (about 10 MB).
  */

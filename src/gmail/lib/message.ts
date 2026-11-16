@@ -7,6 +7,7 @@ import type { EmailAddress } from '../entities/EmailAddress.js';
 import type { Message } from '../entities/Message.js';
 import type { MimeAttachment } from './attachment.js';
 import { headerParamSafe, stripBreaks } from './headers.js';
+import { assertWithinMessageCap } from './limits.js';
 
 /**
  * Lowercased header name -> value, from a message payload. Null-prototype: a
@@ -181,12 +182,12 @@ export function plainTextToHtml(body: string): string {
 }
 
 /**
- * Build an RFC 822 message and base64url-encode it for the Gmail API, via
+ * Build RFC 822 bytes for Gmail media upload, via
  * mail-mime-builder (RFC 2822/2045/2049 compliant: encoded-word headers,
  * multipart, transfer encoding). `from` is required by the builder; pass the
  * authenticated account's address.
  */
-export function buildRawMessage(args: {
+export function buildMessageBytes(args: {
   from: string;
   to: string[];
   cc?: Optional<string[]>;
@@ -196,7 +197,7 @@ export function buildRawMessage(args: {
   htmlBody?: Optional<string>;
   inReplyTo?: Optional<string>;
   attachments?: Optional<MimeAttachment[]>;
-}): string {
+}): Buffer {
   // Strip CR/LF and control characters from every header-bound field: a line
   // break in an address or subject would otherwise inject a new header (e.g. a
   // silent Bcc). Schemas reject these too; this is the choke-point guarantee.
@@ -239,9 +240,14 @@ export function buildRawMessage(args: {
       data: attachment.data,
     });
   }
-  // Base64url the RFC 822 text ourselves (the format the Gmail API expects),
-  // rather than the library's asEncoded(), whose output is not URL-safe base64.
-  return Buffer.from(msg.asRaw()).toString('base64url');
+  const bytes = Buffer.from(msg.asRaw());
+  assertWithinMessageCap(bytes.byteLength);
+  return bytes;
+}
+
+/** Base64url representation for callers using Gmail's JSON raw field. */
+export function buildRawMessage(args: Parameters<typeof buildMessageBytes>[0]): string {
+  return buildMessageBytes(args).toString('base64url');
 }
 
 /**

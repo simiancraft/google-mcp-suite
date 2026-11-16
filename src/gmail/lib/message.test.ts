@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import type { gmail_v1 } from '@googleapis/gmail';
-import { buildRawMessage, plainTextToHtml, projectDraft, projectMessage } from './message.js';
+import { assertWithinMessageCap, MAX_MESSAGE_BYTES } from './limits.js';
+import {
+  buildMessageBytes,
+  buildRawMessage,
+  plainTextToHtml,
+  projectDraft,
+  projectMessage,
+} from './message.js';
 
 const decode = (raw: string) => Buffer.from(raw, 'base64url').toString('utf8');
 const b64 = (s: string) => Buffer.from(s).toString('base64url');
@@ -324,5 +331,30 @@ describe('projectDraft', () => {
       ccRecipients: [],
       bccRecipients: [],
     });
+  });
+});
+
+describe('message upload limit', () => {
+  it('accepts the limit and rejects one byte more with both sizes', () => {
+    expect(() => assertWithinMessageCap(MAX_MESSAGE_BYTES)).not.toThrow();
+    expect(() => assertWithinMessageCap(MAX_MESSAGE_BYTES + 1)).toThrow(
+      "The encoded message is 36700161 bytes; Gmail's message limit is 36700160 bytes (35 MiB).",
+    );
+  });
+
+  it('measures complete UTF-8 MIME bytes, including headers and body', () => {
+    const random = spyOn(Math, 'random').mockReturnValue(0.5);
+    try {
+      const args = { from: 'me@example.com', to: ['a@b.com'], htmlBody: 'é' };
+      const overhead = buildMessageBytes({ ...args, htmlBody: '' }).byteLength;
+      const bodyBytes = MAX_MESSAGE_BYTES - overhead;
+      const htmlBody = 'é'.repeat(Math.floor(bodyBytes / 2)) + 'a'.repeat(bodyBytes % 2);
+      expect(buildMessageBytes({ ...args, htmlBody }).byteLength).toBe(MAX_MESSAGE_BYTES);
+      expect(() => buildMessageBytes({ ...args, htmlBody: `${htmlBody}a` })).toThrow(
+        'The encoded message is 36700161 bytes',
+      );
+    } finally {
+      random.mockRestore();
+    }
   });
 });

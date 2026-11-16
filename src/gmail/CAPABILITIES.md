@@ -9,7 +9,7 @@
 | [`search_threads`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/search_threads) | MCP Tool | Search threads. Returns thread ids and snippets; use get_thread for messages. |
 | [`get_thread`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/get_thread) | MCP Tool | Get a thread and its messages by id. |
 | [`list_drafts`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/list_drafts) | MCP Tool | List draft messages, with optional Gmail query filtering. |
-| [`create_draft`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/create_draft) | MCP Tool | Create a draft email, optionally attaching local files. |
+| [`create_draft`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/create_draft) | MCP Tool | Create a draft email, optionally attaching local files. The complete MIME-encoded message is capped at 36700160 bytes (35 MiB). |
 | [`list_labels`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/list_labels) | MCP Tool | List the labels in the mailbox. |
 | [`create_label`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/create_label) | MCP Tool | Create a new label. |
 | [`label_message`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/label_message) | MCP Tool | Add labels to a message. |
@@ -18,7 +18,7 @@
 | [`unlabel_thread`](https://developers.google.com/workspace/gmail/api/reference/mcp/tools_list/unlabel_thread) ⚠️ | MCP Tool | Remove labels from a thread. |
 | [`get_message`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/get) | REST Method | Get a single message by id. |
 | [`list_messages`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/list) | REST Method | List messages using Gmail query syntax. |
-| [`send_message`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send) ⚠️ | REST Method | Send an email immediately, optionally attaching local files. |
+| [`send_message`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send) ⚠️ | REST Method | Send an email immediately, optionally attaching local files. The complete MIME-encoded message is capped at 36700160 bytes (35 MiB). |
 | [`trash_message`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/trash) ⚠️ | REST Method | Move a message to the trash. |
 | [`untrash_message`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/untrash) | REST Method | Remove a message from the trash. |
 | [`delete_message`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/delete) ⚠️ | REST Method | Permanently delete a message (bypasses the trash). |
@@ -26,7 +26,7 @@
 | [`batch_modify_messages`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/batchModify) ⚠️ | REST Method | Add and/or remove labels across many messages at once. |
 | [`batch_delete_messages`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/batchDelete) ⚠️ | REST Method | Permanently delete many messages at once (bypasses the trash). |
 | [`get_draft`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.drafts/get) | REST Method | Get a draft by id. |
-| [`update_draft`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.drafts/update) | REST Method | Replace the content of an existing draft, optionally attaching local files. |
+| [`update_draft`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.drafts/update) | REST Method | Replace the content of an existing draft, optionally attaching local files. The complete MIME-encoded message is capped at 36700160 bytes (35 MiB). |
 | [`delete_draft`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.drafts/delete) ⚠️ | REST Method | Delete a draft. |
 | [`send_draft`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.drafts/send) ⚠️ | REST Method | Send an existing draft. |
 | [`get_label`](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.labels/get) | REST Method | Get a label by id (includes color and thread counts). |

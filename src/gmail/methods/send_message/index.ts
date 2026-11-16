@@ -1,3 +1,4 @@
+import { MESSAGE_CAP_LABEL } from '../../lib/limits.js';
 import { gmailOperation } from '../../operation.js';
 import { handler } from './handler.js';
 import { schema } from './schema.js';
@@ -9,7 +10,9 @@ import { schema } from './schema.js';
  * named local files are read and assembled into the raw message (issue #101).
  */
 export const send_message = gmailOperation({
-  description: 'Send an email immediately, optionally attaching local files.',
+  description:
+    'Send an email immediately, optionally attaching local files. ' +
+    `The complete MIME-encoded message is capped at ${MESSAGE_CAP_LABEL}.`,
   annotations: {
     readOnlyHint: false,
     destructiveHint: true,
