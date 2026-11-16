@@ -19,9 +19,6 @@ updates:
       # sections under the v10 preset. See issue #66.
       - dependency-name: conventional-changelog-conventionalcommits
         update-types: ["version-update:semver-major"]
-      # Blocked upstream: googleapis-common exact-pins this package; any
-      # newer root copy forks the tree and breaks the build. See issue #70.
-      - dependency-name: google-auth-library
 
   # SHA-pinned actions need automated bumps.
   - package-ecosystem: github-actions
