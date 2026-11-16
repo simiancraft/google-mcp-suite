@@ -81,14 +81,14 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "@googleapis/calendar": "^16.0.0",
-    "@googleapis/docs": "^10.0.0",
-    "@googleapis/drive": "^21.0.0",
-    "@googleapis/gmail": "^18.0.0",
-    "@googleapis/sheets": "^14.0.0",
+    "@googleapis/calendar": "^20.2.0",
+    "@googleapis/docs": "^14.1.1",
+    "@googleapis/drive": "^27.1.0",
+    "@googleapis/gmail": "^22.1.0",
+    "@googleapis/sheets": "^18.1.3",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "addressparser": "^1.0.1",
-    "google-auth-library": "10.5.0",
+    "google-auth-library": "^11.3.4",
     "mail-mime-builder": "^1.0.4",
     "open": "^11.0.4",
     "zod": "^4.6.7"
